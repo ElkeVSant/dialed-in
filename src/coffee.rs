@@ -1,20 +1,25 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
 pub struct Coffee {
-    name: String,
-    origin: String,
-    variety: Vec<String>,
-    process: String,
-    decaf: bool,
-    decaffeination_process: Option<String>,
-    roaster: String,
-    brew_settings: BrewSettings,
-    rating: Rating,
+    pub name: String,
+    pub origin: String,
+    pub variety: Option<Vec<String>>,
+    pub process: Option<String>,
+    pub decaf: bool,
+    pub decaffeination_process: Option<String>,
+    pub roaster: String,
+    pub brew_settings: BrewSettings,
+    pub rating: Rating,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct BrewSettings {
-    grind_size: u8,
-    grind_size_adjustment: Option<GrindAdjustment>,
+    pub grind_size: u8,
+    pub grind_size_adjustment: Option<GrindAdjustment>,
 }
 
+#[derive(Serialize, Deserialize)]
 pub enum GrindAdjustment {
     MuchCoarser,
     Coarser,
@@ -22,15 +27,17 @@ pub enum GrindAdjustment {
     MuchFiner,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Rating {
-    aroma: Score,
-    sweetness: Score,
-    acidity: Score,
-    body: Score,
-    aftertaste: Score,
+    pub aroma: Score,
+    pub sweetness: Score,
+    pub acidity: Score,
+    pub body: Score,
+    pub aftertaste: Score,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Score {
-    strength: u8,
-    personal: u8,
+    pub strength: u8,
+    pub personal: u8,
 }
