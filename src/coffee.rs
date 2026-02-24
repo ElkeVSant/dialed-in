@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Coffee {
     pub name: String,
     pub origin: String,
@@ -13,13 +13,13 @@ pub struct Coffee {
     pub rating: Rating,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct BrewSettings {
     pub grind_size: u8,
     pub grind_size_adjustment: Option<GrindAdjustment>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum GrindAdjustment {
     MuchCoarser,
     Coarser,
@@ -27,7 +27,7 @@ pub enum GrindAdjustment {
     MuchFiner,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Rating {
     pub aroma: Score,
     pub sweetness: Score,
@@ -36,7 +36,7 @@ pub struct Rating {
     pub aftertaste: Score,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Score {
     pub strength: u8,
     pub personal: u8,

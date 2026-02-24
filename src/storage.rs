@@ -12,13 +12,26 @@ fn store(coffees: Vec<Coffee>) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn load() -> Result<Vec<Coffee>, Box<dyn std::error::Error>> {
+    let dir = dirs::home_dir()
+        .ok_or("could not find home directory")?
+        .join("Library/Application Support/Dialed In/coffee_feedback.json");
+    if dir.exists() {
+        let content = fs::read_to_string(dir)?;
+        let coffees: Vec<Coffee> = serde_json::from_str(&content)?;
+        Ok(coffees)
+    } else {
+        Ok(vec![])
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::coffee::{BrewSettings, Rating, Score};
-    #[test]
-    fn test_store() {
-        let coffee = Coffee {
+
+    fn pour_coffee() -> Coffee {
+        Coffee {
             name: "Wildcard By Night".to_string(),
             origin: "Huila, Colombia".to_string(),
             variety: Some(vec!["Pink Bourbon".to_string()]),
@@ -52,7 +65,20 @@ mod tests {
                     personal: 4,
                 },
             },
-        };
+        }
+    }
+
+    #[test]
+    fn test_store() {
+        let coffee = pour_coffee();
         assert!(store(vec![coffee]).is_ok());
+    }
+
+    // Depends on test_store having run first to populate the file
+    #[test]
+    fn test_load() {
+        let coffees = load();
+        let coffee = pour_coffee();
+        assert_eq!(coffees.unwrap(), vec![coffee]);
     }
 }
