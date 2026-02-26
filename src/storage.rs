@@ -1,23 +1,18 @@
 use std::fs;
+use std::path::Path;
 
 use crate::coffee::Coffee;
 
-fn store(coffees: Vec<Coffee>) -> Result<(), Box<dyn std::error::Error>> {
+fn store(coffees: Vec<Coffee>, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let content = serde_json::to_string(&coffees)?;
-    let dir = dirs::home_dir()
-        .ok_or("could not find home directory")?
-        .join("Library/Application Support/Dialed In/");
-    fs::create_dir_all(&dir)?;
-    fs::write(dir.join("coffee_feedback.json"), content)?;
+    fs::create_dir_all(&path)?;
+    fs::write(path.join("coffee_feedback.json"), content)?;
     Ok(())
 }
 
-fn load() -> Result<Vec<Coffee>, Box<dyn std::error::Error>> {
-    let dir = dirs::home_dir()
-        .ok_or("could not find home directory")?
-        .join("Library/Application Support/Dialed In/coffee_feedback.json");
-    if dir.exists() {
-        let content = fs::read_to_string(dir)?;
+fn load(path: &Path) -> Result<Vec<Coffee>, Box<dyn std::error::Error>> {
+    if path.exists() {
+        let content = fs::read_to_string(path.join("coffee_feedback.json"))?;
         let coffees: Vec<Coffee> = serde_json::from_str(&content)?;
         Ok(coffees)
     } else {
@@ -27,6 +22,8 @@ fn load() -> Result<Vec<Coffee>, Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
+    use tempfile::TempDir;
+
     use super::*;
     use crate::coffee::{BrewSettings, Rating, Score};
 
@@ -69,15 +66,13 @@ mod tests {
     }
 
     #[test]
-    fn test_store() {
+    fn test_store_and_load() {
         let coffee = pour_coffee();
-        assert!(store(vec![coffee]).is_ok());
-    }
+        let temp_dir = TempDir::new().expect("could not create temp dir");
+        let path = temp_dir.path();
+        assert!(store(vec![coffee], path).is_ok());
 
-    // Depends on test_store having run first to populate the file
-    #[test]
-    fn test_load() {
-        let coffees = load();
+        let coffees = load(path);
         let coffee = pour_coffee();
         assert_eq!(coffees.unwrap(), vec![coffee]);
     }
