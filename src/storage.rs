@@ -3,16 +3,17 @@ use std::path::Path;
 
 use crate::coffee::Coffee;
 
-fn store(coffees: Vec<Coffee>, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+pub fn store(coffees: Vec<Coffee>, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let content = serde_json::to_string(&coffees)?;
     fs::create_dir_all(&path)?;
     fs::write(path.join("coffee_feedback.json"), content)?;
     Ok(())
 }
 
-fn load(path: &Path) -> Result<Vec<Coffee>, Box<dyn std::error::Error>> {
-    if path.exists() {
-        let content = fs::read_to_string(path.join("coffee_feedback.json"))?;
+pub fn load(path: &Path) -> Result<Vec<Coffee>, Box<dyn std::error::Error>> {
+    let file_path = path.join("coffee_feedback.json");
+    if file_path.exists() {
+        let content = fs::read_to_string(file_path)?;
         let coffees: Vec<Coffee> = serde_json::from_str(&content)?;
         Ok(coffees)
     } else {
@@ -25,45 +26,7 @@ mod tests {
     use tempfile::TempDir;
 
     use super::*;
-    use crate::coffee::{BrewSettings, Rating, Score};
-
-    fn pour_coffee() -> Coffee {
-        Coffee {
-            name: "Wildcard By Night".to_string(),
-            origin: "Huila, Colombia".to_string(),
-            variety: Some(vec!["Pink Bourbon".to_string()]),
-            process: None,
-            decaf: true,
-            decaffeination_process: Some("Advanced".to_string()),
-            roaster: "Wide Awake".to_string(),
-            brew_settings: BrewSettings {
-                grind_size: 4,
-                grind_size_adjustment: None,
-            },
-            rating: Rating {
-                aroma: Score {
-                    strength: 5,
-                    personal: 5,
-                },
-                sweetness: Score {
-                    strength: 5,
-                    personal: 5,
-                },
-                acidity: Score {
-                    strength: 4,
-                    personal: 5,
-                },
-                body: Score {
-                    strength: 3,
-                    personal: 4,
-                },
-                aftertaste: Score {
-                    strength: 4,
-                    personal: 4,
-                },
-            },
-        }
-    }
+    use crate::test_utils::pour_coffee;
 
     #[test]
     fn test_store_and_load() {
