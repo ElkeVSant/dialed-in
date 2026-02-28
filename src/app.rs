@@ -13,13 +13,15 @@ fn add(coffee: Coffee, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use tempfile::TempDir;
+    use uuid::Uuid;
 
     use super::*;
     use crate::test_utils::pour_coffee;
 
     #[test]
     fn test_add() {
-        let coffee = pour_coffee();
+        let id = Uuid::new_v4();
+        let coffee = pour_coffee(id);
         let temp_dir = TempDir::new().expect("could not create temp dir");
         let path = temp_dir.path();
 
@@ -31,7 +33,7 @@ mod tests {
                 .expect("no beans in grinder")
                 .last()
                 .expect("last bag is empty"),
-            &pour_coffee()
+            &pour_coffee(id)
         );
     }
 }

@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct Coffee {
+    pub id: Uuid,
     pub name: String,
     pub origin: Option<String>,
     pub variety: Option<Vec<String>>,

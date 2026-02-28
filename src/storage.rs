@@ -24,19 +24,21 @@ pub fn load(path: &Path) -> Result<Vec<Coffee>, Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use tempfile::TempDir;
+    use uuid::Uuid;
 
     use super::*;
     use crate::test_utils::pour_coffee;
 
     #[test]
     fn test_store_and_load() {
-        let coffee = pour_coffee();
+        let id = Uuid::new_v4();
+        let coffee = pour_coffee(id);
         let temp_dir = TempDir::new().expect("could not create temp dir");
         let path = temp_dir.path();
         assert!(store(vec![coffee], path).is_ok());
 
         let coffees = load(path);
-        let coffee = pour_coffee();
-        assert_eq!(coffees.unwrap(), vec![coffee]);
+        let coffee = pour_coffee(id);
+        assert_eq!(coffees.expect("no beans in grinder"), vec![coffee]);
     }
 }
