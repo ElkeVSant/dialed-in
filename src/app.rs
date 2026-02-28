@@ -33,11 +33,7 @@ fn list_coffees(path: &Path) -> Result<Vec<Coffee>, Box<dyn std::error::Error>> 
 }
 
 fn list_origins(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let coffees = list_coffees(path)?;
-    let origins: HashSet<String> = coffees.iter().filter_map(|c| c.origin.clone()).collect();
-    let mut origins: Vec<String> = origins.into_iter().collect();
-    origins.sort();
-    Ok(origins)
+    list_string_fields(path, |c| c.origin.clone())
 }
 
 fn list_varieties(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
@@ -51,6 +47,21 @@ fn list_varieties(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>
     let mut varieties: Vec<String> = varieties.into_iter().collect();
     varieties.sort();
     Ok(varieties)
+}
+
+fn list_roasters(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    list_string_fields(path, |c| c.roaster.clone())
+}
+
+fn list_string_fields(
+    path: &Path,
+    extractor: impl Fn(&Coffee) -> Option<String>,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let coffees = list_coffees(path)?;
+    let values: HashSet<String> = coffees.iter().filter_map(extractor).collect();
+    let mut values: Vec<String> = values.into_iter().collect();
+    values.sort();
+    Ok(values)
 }
 
 #[cfg(test)]
@@ -120,12 +131,8 @@ mod tests {
         let origins = list_origins(path);
 
         assert_eq!(
-            origin.expect("coffee comes from nowhere"),
-            origins
-                .expect("could not retrace coffee origins")
-                .into_iter()
-                .next()
-                .expect("coffee comes from nowhere")
+            vec![origin.expect("coffee comes from nowhere")],
+            origins.expect("could not retrace coffee origins")
         );
     }
 
@@ -143,6 +150,23 @@ mod tests {
         assert_eq!(
             expected_varieties,
             listed_varieties.expect("coffee not find coffee varieties")
+        );
+    }
+
+    #[test]
+    fn test_list_roasters() {
+        let coffee = pour_coffee();
+        let temp_dir = TempDir::new().expect("could not create temp dir");
+        let path = temp_dir.path();
+
+        let roaster = coffee.roaster.clone();
+        add_coffee(coffee, path).expect("could not add coffee");
+
+        let roasters = list_roasters(path);
+
+        assert_eq!(
+            vec![roaster.expect("is coffee unroasted?")],
+            roasters.expect("no one is roasting coffee")
         );
     }
 }
