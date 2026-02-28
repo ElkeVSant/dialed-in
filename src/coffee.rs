@@ -18,7 +18,7 @@ pub struct Coffee {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct BrewSettings {
-    pub grind_size: u8,
+    pub grind_size: f32,
     pub grind_size_adjustment: Option<GrindAdjustment>,
 }
 

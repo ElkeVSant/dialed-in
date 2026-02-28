@@ -9,7 +9,7 @@ pub fn pour_coffee() -> Coffee {
         decaf: Some(false),
         roaster: Some("Little Waves Coffee Roasters".to_string()),
         brew_settings: Some(BrewSettings {
-            grind_size: 3,
+            grind_size: 3.25,
             grind_size_adjustment: None,
         }),
         rating: Some(Rating {
@@ -48,7 +48,7 @@ pub fn pour_decaf() -> Coffee {
         decaffeination_process: Some("Advanced".to_string()),
         roaster: Some("Wide Awake".to_string()),
         brew_settings: Some(BrewSettings {
-            grind_size: 4,
+            grind_size: 4.0,
             grind_size_adjustment: None,
         }),
         rating: Some(Rating {
