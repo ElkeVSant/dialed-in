@@ -49,6 +49,14 @@ fn list_varieties(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>
     Ok(varieties)
 }
 
+fn list_processes(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    list_string_fields(path, |c| c.process.clone())
+}
+
+fn list_decaffeination_processes(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    list_string_fields(path, |c| c.decaffeination_process.clone())
+}
+
 fn list_roasters(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     list_string_fields(path, |c| c.roaster.clone())
 }
@@ -69,7 +77,7 @@ mod tests {
     use tempfile::TempDir;
 
     use super::*;
-    use crate::test_utils::pour_coffee;
+    use crate::test_utils::{pour_coffee, pour_decaf};
 
     #[test]
     fn test_add_coffee() {
@@ -150,6 +158,40 @@ mod tests {
         assert_eq!(
             expected_varieties,
             listed_varieties.expect("coffee not find coffee varieties")
+        );
+    }
+
+    #[test]
+    fn test_list_processes() {
+        let coffee = pour_coffee();
+        let temp_dir = TempDir::new().expect("could not create temp dir");
+        let path = temp_dir.path();
+
+        let process = coffee.process.clone();
+        add_coffee(coffee, path).expect("could not add coffee");
+
+        let processes = list_processes(path);
+
+        assert_eq!(
+            vec![process.expect("is coffee unprocessed?")],
+            processes.expect("no coffees were processed")
+        );
+    }
+
+    #[test]
+    fn test_list_decaffeination_processes() {
+        let coffee = pour_decaf();
+        let temp_dir = TempDir::new().expect("could not create temp dir");
+        let path = temp_dir.path();
+
+        let decaffeination_process = coffee.decaffeination_process.clone();
+        add_coffee(coffee, path).expect("could not add coffee");
+
+        let decaffeination_processes = list_decaffeination_processes(path);
+
+        assert_eq!(
+            vec![decaffeination_process.expect("is coffee not processed for decaffeination?")],
+            decaffeination_processes.expect("no coffees were processed for decaffeination")
         );
     }
 
