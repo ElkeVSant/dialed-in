@@ -40,6 +40,19 @@ fn list_origins(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> 
     Ok(origins)
 }
 
+fn list_varieties(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let coffees = list_coffees(path)?;
+    let varieties: HashSet<String> = coffees
+        .iter()
+        .filter_map(|c| c.varieties.as_ref())
+        .flatten()
+        .cloned()
+        .collect();
+    let mut varieties: Vec<String> = varieties.into_iter().collect();
+    varieties.sort();
+    Ok(varieties)
+}
+
 #[cfg(test)]
 mod tests {
     use tempfile::TempDir;
@@ -109,10 +122,27 @@ mod tests {
         assert_eq!(
             origin.expect("coffee comes from nowhere"),
             origins
-                .expect("coffee not retrace coffee origins")
+                .expect("could not retrace coffee origins")
                 .into_iter()
                 .next()
                 .expect("coffee comes from nowhere")
+        );
+    }
+
+    #[test]
+    fn test_list_varieties() {
+        let coffee = pour_coffee();
+        let temp_dir = TempDir::new().expect("could not create temp dir");
+        let path = temp_dir.path();
+
+        let expected_varieties = coffee.varieties.clone().expect("coffee varieties unknown");
+        add_coffee(coffee, path).expect("could not add coffee");
+
+        let listed_varieties = list_varieties(path);
+
+        assert_eq!(
+            expected_varieties,
+            listed_varieties.expect("coffee not find coffee varieties")
         );
     }
 }

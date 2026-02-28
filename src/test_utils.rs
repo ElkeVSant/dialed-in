@@ -4,7 +4,7 @@ pub fn pour_coffee() -> Coffee {
     Coffee {
         name: "Wildcard By Night".to_string(),
         origin: Some("Huila, Colombia".to_string()),
-        variety: Some(vec!["Pink Bourbon".to_string()]),
+        varieties: Some(vec!["Pink Bourbon".to_string()]),
         decaf: Some(true),
         decaffeination_process: Some("Advanced".to_string()),
         roaster: Some("Wide Awake".to_string()),

@@ -6,7 +6,7 @@ pub struct Coffee {
     pub id: Uuid,
     pub name: String,
     pub origin: Option<String>,
-    pub variety: Option<Vec<String>>,
+    pub varieties: Option<Vec<String>>,
     pub process: Option<String>,
     pub decaf: Option<bool>,
     pub decaffeination_process: Option<String>,
