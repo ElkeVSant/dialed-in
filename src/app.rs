@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::Path;
 
 use uuid::Uuid;
@@ -29,6 +30,14 @@ fn update_coffee(coffee: Coffee, path: &Path) -> Result<(), Box<dyn std::error::
 fn list_coffees(path: &Path) -> Result<Vec<Coffee>, Box<dyn std::error::Error>> {
     let coffees = load(path)?;
     Ok(coffees)
+}
+
+fn list_origins(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let coffees = list_coffees(path)?;
+    let origins: HashSet<String> = coffees.iter().filter_map(|c| c.origin.clone()).collect();
+    let mut origins: Vec<String> = origins.into_iter().collect();
+    origins.sort();
+    Ok(origins)
 }
 
 #[cfg(test)]
@@ -83,6 +92,27 @@ mod tests {
                 .first()
                 .expect("first bag is empty"),
             &expected_coffee
+        );
+    }
+
+    #[test]
+    fn test_list_origins() {
+        let coffee = pour_coffee();
+        let temp_dir = TempDir::new().expect("could not create temp dir");
+        let path = temp_dir.path();
+
+        let origin = coffee.origin.clone();
+        add_coffee(coffee, path).expect("could not add coffee");
+
+        let origins = list_origins(path);
+
+        assert_eq!(
+            origin.expect("coffee comes from nowhere"),
+            origins
+                .expect("coffee not retrace coffee origins")
+                .into_iter()
+                .next()
+                .expect("coffee comes from nowhere")
         );
     }
 }
