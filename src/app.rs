@@ -5,14 +5,14 @@ use uuid::Uuid;
 use crate::coffee::Coffee;
 use crate::storage::{load, store};
 
-fn add(coffee: Coffee, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn add_coffee(coffee: Coffee, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let mut coffees = load(path)?;
     coffees.push(coffee);
     store(coffees, path)?;
     Ok(())
 }
 
-fn update(coffee: Coffee, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn update_coffee(coffee: Coffee, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let mut coffees = load(path)?;
     for cup in coffees.iter_mut() {
         if cup.id == coffee.id {
@@ -24,6 +24,11 @@ fn update(coffee: Coffee, path: &Path) -> Result<(), Box<dyn std::error::Error>>
     Ok(())
 }
 
+fn list_coffees(path: &Path) -> Result<Vec<Coffee>, Box<dyn std::error::Error>> {
+    let coffees = load(path)?;
+    Ok(coffees)
+}
+
 #[cfg(test)]
 mod tests {
     use tempfile::TempDir;
@@ -32,14 +37,14 @@ mod tests {
     use crate::test_utils::pour_coffee;
 
     #[test]
-    fn test_add() {
+    fn test_add_coffee() {
         let id = Uuid::new_v4();
         let coffee = pour_coffee(id);
         let temp_dir = TempDir::new().expect("could not create temp dir");
         let path = temp_dir.path();
 
-        add(coffee, path).expect("could not add coffee");
-        let coffees = load(path);
+        add_coffee(coffee, path).expect("could not add coffee");
+        let coffees = list_coffees(path);
 
         assert_eq!(
             coffees
@@ -51,18 +56,18 @@ mod tests {
     }
 
     #[test]
-    fn test_update() {
+    fn test_update_coffee() {
         let id = Uuid::new_v4();
         let initial_coffee = pour_coffee(id);
         let temp_dir = TempDir::new().expect("could not create temp dir");
         let path = temp_dir.path();
 
-        add(initial_coffee, path).expect("could not add coffee");
+        add_coffee(initial_coffee, path).expect("could not add coffee");
 
         let mut updated_coffee = pour_coffee(id);
         updated_coffee.notes = Some("Wauw!".to_string());
-        update(updated_coffee, path).expect("could not update coffee");
-        let coffees = load(path);
+        update_coffee(updated_coffee, path).expect("could not update coffee");
+        let coffees = list_coffees(path);
 
         let mut expected_coffee = pour_coffee(id);
         expected_coffee.notes = Some("Wauw!".to_string());
