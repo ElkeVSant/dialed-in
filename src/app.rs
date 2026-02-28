@@ -27,6 +27,13 @@ fn update_coffee(coffee: Coffee, path: &Path) -> Result<(), Box<dyn std::error::
     Ok(())
 }
 
+fn delete_coffee(id: Uuid, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let mut coffees = load(path)?;
+    coffees.retain(|c| c.id != id);
+    store(coffees, path)?;
+    Ok(())
+}
+
 fn list_coffees(path: &Path) -> Result<Vec<Coffee>, Box<dyn std::error::Error>> {
     let coffees = load(path)?;
     Ok(coffees)
@@ -125,6 +132,21 @@ mod tests {
                 .expect("first bag is empty"),
             &expected_coffee
         );
+    }
+
+    #[test]
+    fn test_delete_coffee() {
+        let coffee = pour_coffee();
+        let temp_dir = TempDir::new().expect("could not create temp dir");
+        let path = temp_dir.path();
+
+        let id = add_coffee(coffee, path).expect("could not add coffee");
+
+        delete_coffee(id, path).expect("could not purge grinder");
+
+        let coffees = list_coffees(path);
+
+        assert!(coffees.expect("no beans in grinder").is_empty());
     }
 
     #[test]
