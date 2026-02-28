@@ -1,10 +1,7 @@
-use uuid::Uuid;
-
 use crate::coffee::{BrewSettings, Coffee, Rating, Score};
 
-pub fn pour_coffee(id: Uuid) -> Coffee {
+pub fn pour_coffee() -> Coffee {
     Coffee {
-        id,
         name: "Wildcard By Night".to_string(),
         origin: Some("Huila, Colombia".to_string()),
         variety: Some(vec!["Pink Bourbon".to_string()]),
