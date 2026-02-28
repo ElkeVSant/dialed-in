@@ -5,7 +5,6 @@ pub fn pour_coffee() -> Coffee {
         name: "Wildcard By Night".to_string(),
         origin: Some("Huila, Colombia".to_string()),
         variety: Some(vec!["Pink Bourbon".to_string()]),
-        process: None,
         decaf: Some(true),
         decaffeination_process: Some("Advanced".to_string()),
         roaster: Some("Wide Awake".to_string()),
@@ -35,6 +34,6 @@ pub fn pour_coffee() -> Coffee {
                 personal: 4,
             }),
         }),
-        notes: None,
+        ..Default::default()
     }
 }
