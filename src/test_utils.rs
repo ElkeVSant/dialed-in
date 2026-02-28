@@ -3,37 +3,38 @@ use crate::coffee::{BrewSettings, Coffee, Rating, Score};
 pub fn pour_coffee() -> Coffee {
     Coffee {
         name: "Wildcard By Night".to_string(),
-        origin: "Huila, Colombia".to_string(),
+        origin: Some("Huila, Colombia".to_string()),
         variety: Some(vec!["Pink Bourbon".to_string()]),
         process: None,
-        decaf: true,
+        decaf: Some(true),
         decaffeination_process: Some("Advanced".to_string()),
-        roaster: "Wide Awake".to_string(),
-        brew_settings: BrewSettings {
+        roaster: Some("Wide Awake".to_string()),
+        brew_settings: Some(BrewSettings {
             grind_size: 4,
             grind_size_adjustment: None,
-        },
-        rating: Rating {
-            aroma: Score {
+        }),
+        rating: Some(Rating {
+            aroma: Some(Score {
                 strength: 5,
                 personal: 5,
-            },
-            sweetness: Score {
+            }),
+            sweetness: Some(Score {
                 strength: 5,
                 personal: 5,
-            },
-            acidity: Score {
+            }),
+            acidity: Some(Score {
                 strength: 4,
                 personal: 5,
-            },
-            body: Score {
+            }),
+            body: Some(Score {
                 strength: 3,
                 personal: 4,
-            },
-            aftertaste: Score {
+            }),
+            aftertaste: Some(Score {
                 strength: 4,
                 personal: 4,
-            },
-        },
+            }),
+        }),
+        notes: None,
     }
 }
