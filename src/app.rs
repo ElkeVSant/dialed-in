@@ -39,7 +39,7 @@ fn delete_coffee(id: Uuid, path: &Path) -> Result<(), Box<dyn std::error::Error>
     Ok(())
 }
 
-fn list_coffees(path: &Path) -> Result<Vec<Coffee>, Box<dyn std::error::Error>> {
+pub fn list_coffees(path: &Path) -> Result<Vec<Coffee>, Box<dyn std::error::Error>> {
     let coffees = load(path)?;
     Ok(coffees)
 }

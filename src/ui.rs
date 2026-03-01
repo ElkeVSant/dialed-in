@@ -1,4 +1,7 @@
-use ratatui::widgets::Paragraph;
+use crate::app::list_coffees;
+use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::widgets::{List, ListItem, Paragraph};
+
 use ratatui::DefaultTerminal;
 
 const DIALED_IN: &str = r#"
@@ -17,10 +20,27 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
+    let path = dirs::data_dir()
+        .expect("could not find data directory")
+        .join("Dialed In");
+    let coffees = list_coffees(&path).expect("could not list coffees");
+
     loop {
         terminal.draw(|frame| {
-            frame.render_widget(Paragraph::new(DIALED_IN), frame.area());
-        });
+            let areas = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(10), Constraint::Min(0)])
+                .split(frame.area());
+
+            frame.render_widget(Paragraph::new(DIALED_IN), areas[0]);
+
+            let coffee_names: Vec<ListItem> = coffees
+                .iter()
+                .map(|c| ListItem::new(c.name.clone()))
+                .collect();
+            let coffee_list = List::new(coffee_names);
+            frame.render_widget(coffee_list, areas[1]);
+        })?;
         if ratatui::crossterm::event::read()?.is_key_press() {
             break Ok(());
         }
