@@ -16,6 +16,10 @@ const DIALED_IN: &str = r#"
 888  .d88P888888  888888Y8b.    Y88b 888  888  888  888 
 8888888P" 888"Y888888888 "Y8888  "Y888888888888888  888 "#;
 
+struct State {
+    coffees: Vec<Coffee>,
+}
+
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     ratatui::run(app)?;
     Ok(())
@@ -25,7 +29,10 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
     let path = dirs::data_dir()
         .expect("could not find data directory")
         .join("Dialed In");
-    let coffees = list_coffees(&path).expect("could not list coffees");
+
+    let state = State {
+        coffees: list_coffees(&path).expect("could not list coffees"),
+    };
 
     loop {
         terminal.draw(|frame| {
@@ -35,7 +42,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 .split(frame.area());
 
             render_app_name(frame, areas[0]);
-            render_coffees(&coffees, frame, areas[1]);
+            render_coffees(&state.coffees, frame, areas[1]);
         })?;
 
         if let Event::Key(key) = read()? {
