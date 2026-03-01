@@ -1,9 +1,10 @@
-use crate::app::list_coffees;
 use ratatui::crossterm::event::{read, Event, KeyCode};
-use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::widgets::{List, ListItem, Paragraph};
+use ratatui::{DefaultTerminal, Frame};
 
-use ratatui::DefaultTerminal;
+use crate::app::list_coffees;
+use crate::coffee::Coffee;
 
 const DIALED_IN: &str = r#"
 8888888b. d8b        888             8888888888         
@@ -33,19 +34,27 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 .constraints([Constraint::Length(10), Constraint::Min(0)])
                 .split(frame.area());
 
-            frame.render_widget(Paragraph::new(DIALED_IN), areas[0]);
-
-            let coffee_names: Vec<ListItem> = coffees
-                .iter()
-                .map(|c| ListItem::new(c.name.clone()))
-                .collect();
-            let coffee_list = List::new(coffee_names);
-            frame.render_widget(coffee_list, areas[1]);
+            render_app_name(frame, areas[0]);
+            render_coffees(&coffees, frame, areas[1]);
         })?;
+
         if let Event::Key(key) = read()? {
             if key.code == KeyCode::Char('q') {
                 break Ok(());
             }
         }
     }
+}
+
+fn render_app_name(frame: &mut Frame, area: Rect) {
+    frame.render_widget(Paragraph::new(DIALED_IN), area);
+}
+
+fn render_coffees(coffees: &[Coffee], frame: &mut Frame, area: Rect) {
+    let coffee_names: Vec<ListItem> = coffees
+        .iter()
+        .map(|c| ListItem::new(c.name.clone()))
+        .collect();
+    let coffee_list = List::new(coffee_names);
+    frame.render_widget(coffee_list, area);
 }
