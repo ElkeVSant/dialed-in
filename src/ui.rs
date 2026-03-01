@@ -1,4 +1,5 @@
 use crate::app::list_coffees;
+use ratatui::crossterm::event::{read, Event, KeyCode};
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::widgets::{List, ListItem, Paragraph};
 
@@ -41,8 +42,10 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
             let coffee_list = List::new(coffee_names);
             frame.render_widget(coffee_list, areas[1]);
         })?;
-        if ratatui::crossterm::event::read()?.is_key_press() {
-            break Ok(());
+        if let Event::Key(key) = read()? {
+            if key.code == KeyCode::Char('q') {
+                break Ok(());
+            }
         }
     }
 }
