@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::path::Path;
 
+use chrono::Utc;
 use uuid::Uuid;
 
 use crate::coffee::Coffee;
@@ -9,13 +10,17 @@ use crate::storage::{load, store};
 fn add_coffee(mut coffee: Coffee, path: &Path) -> Result<Uuid, Box<dyn std::error::Error>> {
     let id = Uuid::new_v4();
     coffee.id = id;
+    let timestamp = Utc::now();
+    coffee.created_at = timestamp;
+    coffee.updated_at = timestamp;
     let mut coffees = load(path)?;
     coffees.push(coffee);
     store(coffees, path)?;
     Ok(id)
 }
 
-fn update_coffee(coffee: Coffee, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn update_coffee(mut coffee: Coffee, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    coffee.updated_at = Utc::now();
     let mut coffees = load(path)?;
     for cup in coffees.iter_mut() {
         if cup.id == coffee.id {
@@ -93,18 +98,15 @@ mod tests {
         let path = temp_dir.path();
 
         let id = add_coffee(coffee, path).expect("could not add coffee");
-        let coffees = list_coffees(path);
+        let coffees = list_coffees(path).expect("no beans in grinder");
+        let created_coffee = coffees.first().expect("bag is empty");
 
         let mut expected_coffee = pour_coffee();
         expected_coffee.id = id;
+        expected_coffee.created_at = created_coffee.created_at;
+        expected_coffee.updated_at = created_coffee.updated_at;
 
-        assert_eq!(
-            coffees
-                .expect("no beans in grinder")
-                .last()
-                .expect("last bag is empty"),
-            &expected_coffee
-        );
+        assert_eq!(created_coffee, &expected_coffee);
     }
 
     #[test]
@@ -119,19 +121,16 @@ mod tests {
         updated_coffee.id = id;
         updated_coffee.notes = Some("Wauw!".to_string());
         update_coffee(updated_coffee, path).expect("could not update coffee");
-        let coffees = list_coffees(path);
+        let coffees = list_coffees(path).expect("no beans in grinder");
+        let updated_coffee = coffees.first().expect("bag is empty");
 
         let mut expected_coffee = pour_coffee();
         expected_coffee.id = id;
         expected_coffee.notes = Some("Wauw!".to_string());
+        expected_coffee.created_at = updated_coffee.created_at;
+        expected_coffee.updated_at = updated_coffee.updated_at;
 
-        assert_eq!(
-            coffees
-                .expect("no beans in grinder")
-                .first()
-                .expect("first bag is empty"),
-            &expected_coffee
-        );
+        assert_eq!(updated_coffee, &expected_coffee);
     }
 
     #[test]

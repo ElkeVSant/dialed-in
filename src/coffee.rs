@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -14,6 +15,8 @@ pub struct Coffee {
     pub brew_settings: Option<BrewSettings>,
     pub rating: Option<Rating>,
     pub notes: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
