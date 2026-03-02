@@ -2,11 +2,11 @@ use ratatui::{
     crossterm::event::{Event, KeyCode, read},
     layout::{Constraint, Direction, HorizontalAlignment, Layout, Margin, Rect},
     style::{Color, Style, Stylize},
-    widgets::{Block, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Clear, List, ListItem, ListState, Paragraph},
     {DefaultTerminal, Frame},
 };
 
-use crate::app::{add_coffee, list_coffees};
+use crate::app::{add_coffee, delete_coffee, list_coffees};
 use crate::coffee::Coffee;
 
 const DIALED_IN: &str = r#"
@@ -19,8 +19,8 @@ const DIALED_IN: &str = r#"
 888  .d88P888888  888888Y8b.    Y88b 888  888  888  888 
 8888888P" 888"Y888888888 "Y8888  "Y888888888888888  888 "#;
 
-type FieldAccessor = Box<dyn Fn(&DraftCoffee) -> String>;
-type Field = (&'static str, FieldAccessor);
+type DraftFieldAccessor = Box<dyn Fn(&DraftCoffee) -> String>;
+type DraftField = (&'static str, DraftFieldAccessor);
 
 #[derive(Default)]
 struct State {
@@ -42,6 +42,7 @@ enum Mode {
     #[default]
     Normal,
     Add,
+    Delete,
 }
 
 #[derive(Default)]
@@ -92,6 +93,14 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                     areas[1],
                 );
             }
+
+            if matches!(state.ui_state.mode, Mode::Delete) {
+                if let Some(index) = state.ui_state.list_state.selected() {
+                    render_delete_coffee_modal(&state.coffees[index], frame, areas[1]);
+                } else {
+                    state.ui_state.mode = Mode::Normal;
+                }
+            }
         })?;
 
         if let Event::Key(key) = read()? {
@@ -113,6 +122,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                         state.ui_state.add_focus = 0;
                         state.ui_state.error = None;
                     }
+                    KeyCode::Char('d') => state.ui_state.mode = Mode::Delete,
                     _ => (),
                 },
                 Mode::Add => match key.code {
@@ -128,8 +138,8 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                                     state.coffees =
                                         list_coffees(&path).expect("could not list coffees");
                                     state.ui_state.coffee = None;
-                                    state.ui_state.mode = Mode::Normal;
                                     state.ui_state.list_state = ListState::default();
+                                    state.ui_state.mode = Mode::Normal;
                                 }
                                 Err(e) => state.ui_state.error = Some(e.to_string()),
                             }
@@ -144,6 +154,26 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             c,
                         );
                     }
+                    _ => (),
+                },
+                Mode::Delete => match key.code {
+                    KeyCode::Enter => {
+                        delete_coffee(
+                            state.coffees[state
+                                .ui_state
+                                .list_state
+                                .selected()
+                                .expect("dropped all beans")]
+                            .id,
+                            &path,
+                        )
+                        .expect("cannot purge grinder");
+                        state.coffees = list_coffees(&path).expect("could not list coffees");
+                        state.ui_state.list_state = ListState::default();
+                        state.ui_state.mode = Mode::Normal;
+                    }
+                    KeyCode::Esc => state.ui_state.mode = Mode::Normal,
+                    KeyCode::Char('q') => break Ok(()),
                     _ => (),
                 },
             }
@@ -174,6 +204,7 @@ fn render_add_coffee_modal(
     let modal_area = area.inner(Margin::new(2, 1));
     let modal = Block::bordered().title("New coffee");
     let inner_modal_area = modal.inner(modal_area);
+    frame.render_widget(Clear, modal_area);
     frame.render_widget(modal, modal_area);
 
     let draft_fields = build_draft_fields();
@@ -188,13 +219,7 @@ fn render_add_coffee_modal(
         .split(inner_modal_area);
     let field_areas = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(1),
-            Constraint::Length(1),
-            Constraint::Length(1),
-            Constraint::Length(1),
-            Constraint::Length(1),
-        ])
+        .constraints(vec![Constraint::Length(1); 5])
         .split(inner_modal_areas[0]);
     draft_fields
         .iter()
@@ -227,20 +252,7 @@ fn render_add_coffee_modal(
     );
 }
 
-fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: usize, c: char) {
-    let coffee = coffee.get_or_insert_with(DraftCoffee::default);
-    // indices are linked to build_draft_fields response
-    match focus {
-        0 => coffee.name.get_or_insert_with(String::new).push(c),
-        1 => coffee.origin.get_or_insert_with(String::new).push(c),
-        2 => coffee.varieties.get_or_insert_with(String::new).push(c),
-        3 => coffee.process.get_or_insert_with(String::new).push(c),
-        4 => coffee.roaster.get_or_insert_with(String::new).push(c),
-        _ => (),
-    };
-}
-
-fn build_draft_fields() -> Vec<Field> {
+fn build_draft_fields() -> Vec<DraftField> {
     vec![
         ("Name", Box::new(|c| c.name.clone().unwrap_or_default())),
         ("Origin", Box::new(|c| c.origin.clone().unwrap_or_default())),
@@ -259,6 +271,19 @@ fn build_draft_fields() -> Vec<Field> {
     ]
 }
 
+fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: usize, c: char) {
+    let coffee = coffee.get_or_insert_with(DraftCoffee::default);
+    // indices are linked to build_draft_fields response
+    match focus {
+        0 => coffee.name.get_or_insert_with(String::new).push(c),
+        1 => coffee.origin.get_or_insert_with(String::new).push(c),
+        2 => coffee.varieties.get_or_insert_with(String::new).push(c),
+        3 => coffee.process.get_or_insert_with(String::new).push(c),
+        4 => coffee.roaster.get_or_insert_with(String::new).push(c),
+        _ => (),
+    };
+}
+
 fn convert_draft_to_coffee(draft: &DraftCoffee) -> Result<Coffee, Box<dyn std::error::Error>> {
     Ok(Coffee {
         name: draft.name.clone().ok_or("name is required")?,
@@ -271,4 +296,56 @@ fn convert_draft_to_coffee(draft: &DraftCoffee) -> Result<Coffee, Box<dyn std::e
         roaster: draft.roaster.clone(),
         ..Default::default()
     })
+}
+
+fn render_delete_coffee_modal(coffee: &Coffee, frame: &mut Frame, area: Rect) {
+    let modal_area = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Fill(1),
+            Constraint::Length(50),
+            Constraint::Fill(1),
+        ])
+        .split(
+            Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Fill(1),
+                    Constraint::Length(10),
+                    Constraint::Fill(1),
+                ])
+                .split(area)[1],
+        )[1];
+    let modal = Block::bordered().title("Delete coffee");
+    let inner_modal_area = modal.inner(modal_area);
+    frame.render_widget(Clear, modal_area);
+    frame.render_widget(modal, modal_area);
+
+    let coffee_fields = [
+        format!("Name: {}", coffee.name),
+        format!("Origin: {}", coffee.origin.as_deref().unwrap_or_default()),
+        format!(
+            "Varieties: {}",
+            coffee.varieties.as_deref().unwrap_or_default().join(", ")
+        ),
+        format!("Process: {}", coffee.process.as_deref().unwrap_or_default()),
+        format!("Roaster: {}", coffee.roaster.as_deref().unwrap_or_default()),
+    ];
+
+    let inner_modal_areas = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(coffee_fields.len() as u16),
+            Constraint::Min(0),
+        ])
+        .split(inner_modal_area);
+    let field_areas = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(vec![Constraint::Length(1); 5])
+        .split(inner_modal_areas[0]);
+
+    coffee_fields
+        .iter()
+        .zip(field_areas.iter())
+        .for_each(|(value, area)| frame.render_widget(Paragraph::new(value.as_str()), *area));
 }

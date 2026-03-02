@@ -32,7 +32,7 @@ fn update_coffee(mut coffee: Coffee, path: &Path) -> Result<(), Box<dyn std::err
     Ok(())
 }
 
-fn delete_coffee(id: Uuid, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+pub fn delete_coffee(id: Uuid, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let mut coffees = load(path)?;
     coffees.retain(|c| c.id != id);
     store(coffees, path)?;
