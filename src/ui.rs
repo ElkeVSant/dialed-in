@@ -6,7 +6,7 @@ use ratatui::{
     {DefaultTerminal, Frame},
 };
 
-use crate::app::list_coffees;
+use crate::app::{add_coffee, list_coffees};
 use crate::coffee::Coffee;
 
 const DIALED_IN: &str = r#"
@@ -90,7 +90,10 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
             match state.ui_state.mode {
                 Mode::Normal => match key.code {
                     KeyCode::Char('q') => break Ok(()),
-                    KeyCode::Char('a') => state.ui_state.mode = Mode::Add,
+                    KeyCode::Char('a') => {
+                        state.ui_state.mode = Mode::Add;
+                        state.ui_state.focus = 0;
+                    }
                     _ => (),
                 },
                 Mode::Add => match key.code {
@@ -98,7 +101,15 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                         state.ui_state.focus =
                             (state.ui_state.focus + 1) % build_draft_fields().len()
                     }
-                    KeyCode::Enter => break Ok(()),
+                    KeyCode::Enter => {
+                        if let Some(draft) = state.ui_state.coffee.take() {
+                            let coffee =
+                                convert_draft_to_coffee(draft).expect("cannot pour this cup");
+                            add_coffee(coffee, &path).expect("cannot remember coffee");
+                            state.coffees = list_coffees(&path).expect("could not list coffees");
+                        }
+                        state.ui_state.mode = Mode::Normal;
+                    }
                     KeyCode::Char(c) => {
                         update_draft_coffee(&mut state.ui_state.coffee, state.ui_state.focus, c);
                     }
@@ -170,6 +181,7 @@ fn render_add_coffee_modal(
 
 fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: usize, c: char) {
     let coffee = coffee.get_or_insert_with(DraftCoffee::default);
+    // indices are linked to build_draft_fields response
     match focus {
         0 => coffee.name.get_or_insert_with(String::new).push(c),
         1 => coffee.origin.get_or_insert_with(String::new).push(c),
@@ -197,4 +209,17 @@ fn build_draft_fields() -> Vec<Field> {
             Box::new(|c| c.roaster.clone().unwrap_or_default()),
         ),
     ]
+}
+
+fn convert_draft_to_coffee(draft: DraftCoffee) -> Result<Coffee, Box<dyn std::error::Error>> {
+    Ok(Coffee {
+        name: draft.name.ok_or("name is required")?,
+        origin: draft.origin,
+        varieties: draft
+            .varieties
+            .map(|v| v.split(", ").map(|s| s.to_string()).collect()),
+        process: draft.process,
+        roaster: draft.roaster,
+        ..Default::default()
+    })
 }

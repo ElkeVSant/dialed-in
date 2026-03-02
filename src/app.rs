@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::coffee::Coffee;
 use crate::storage::{load, store};
 
-fn add_coffee(mut coffee: Coffee, path: &Path) -> Result<Uuid, Box<dyn std::error::Error>> {
+pub fn add_coffee(mut coffee: Coffee, path: &Path) -> Result<Uuid, Box<dyn std::error::Error>> {
     let id = Uuid::new_v4();
     coffee.id = id;
     let timestamp = Utc::now();
