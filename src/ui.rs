@@ -1,8 +1,8 @@
 use ratatui::{
-    crossterm::event::{read, Event, KeyCode},
+    crossterm::event::{Event, KeyCode, read},
     layout::{Constraint, Direction, HorizontalAlignment, Layout, Margin, Rect},
-    style::{Color, Stylize},
-    widgets::{Block, List, ListItem, Paragraph},
+    style::{Color, Style, Stylize},
+    widgets::{Block, List, ListItem, ListState, Paragraph},
     {DefaultTerminal, Frame},
 };
 
@@ -31,7 +31,8 @@ struct State {
 #[derive(Default)]
 struct UiState {
     mode: Mode,
-    focus: usize,
+    add_focus: usize,
+    list_state: ListState,
     coffee: Option<DraftCoffee>,
     error: Option<String>,
 }
@@ -75,11 +76,16 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 .split(frame.area());
 
             render_app_name(frame, areas[0]);
-            render_coffees(&state.coffees, frame, areas[1]);
+            render_coffees(
+                &mut state.ui_state.list_state,
+                &state.coffees,
+                frame,
+                areas[1],
+            );
 
             if matches!(state.ui_state.mode, Mode::Add) {
                 render_add_coffee_modal(
-                    state.ui_state.focus,
+                    state.ui_state.add_focus,
                     &state.ui_state.coffee,
                     &state.ui_state.error,
                     frame,
@@ -93,17 +99,26 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 Mode::Normal => match key.code {
                     KeyCode::Char('q') => break Ok(()),
                     KeyCode::Esc => break Ok(()),
+                    KeyCode::Tab => {
+                        if let Some(index) = state.ui_state.list_state.selected()
+                            && index == state.coffees.len() - 1
+                        {
+                            state.ui_state.list_state.select_first();
+                        } else {
+                            state.ui_state.list_state.select_next();
+                        }
+                    }
                     KeyCode::Char('a') => {
                         state.ui_state.mode = Mode::Add;
-                        state.ui_state.focus = 0;
+                        state.ui_state.add_focus = 0;
                         state.ui_state.error = None;
                     }
                     _ => (),
                 },
                 Mode::Add => match key.code {
                     KeyCode::Tab => {
-                        state.ui_state.focus =
-                            (state.ui_state.focus + 1) % build_draft_fields().len()
+                        state.ui_state.add_focus =
+                            (state.ui_state.add_focus + 1) % build_draft_fields().len()
                     }
                     KeyCode::Enter => {
                         if let Some(draft) = &state.ui_state.coffee {
@@ -114,6 +129,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                                         list_coffees(&path).expect("could not list coffees");
                                     state.ui_state.coffee = None;
                                     state.ui_state.mode = Mode::Normal;
+                                    state.ui_state.list_state = ListState::default();
                                 }
                                 Err(e) => state.ui_state.error = Some(e.to_string()),
                             }
@@ -122,7 +138,11 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                     KeyCode::Esc => state.ui_state.mode = Mode::Normal,
                     KeyCode::Char(c) => {
                         state.ui_state.error = None;
-                        update_draft_coffee(&mut state.ui_state.coffee, state.ui_state.focus, c);
+                        update_draft_coffee(
+                            &mut state.ui_state.coffee,
+                            state.ui_state.add_focus,
+                            c,
+                        );
                     }
                     _ => (),
                 },
@@ -135,13 +155,13 @@ fn render_app_name(frame: &mut Frame, area: Rect) {
     frame.render_widget(Paragraph::new(DIALED_IN), area);
 }
 
-fn render_coffees(coffees: &[Coffee], frame: &mut Frame, area: Rect) {
+fn render_coffees(state: &mut ListState, coffees: &[Coffee], frame: &mut Frame, area: Rect) {
     let coffee_names: Vec<ListItem> = coffees
         .iter()
         .map(|c| ListItem::new(c.name.clone()))
         .collect();
-    let coffee_list = List::new(coffee_names);
-    frame.render_widget(coffee_list, area);
+    let coffee_list = List::new(coffee_names).highlight_style(Style::new().bg(Color::DarkGray));
+    frame.render_stateful_widget(coffee_list, area, state);
 }
 
 fn render_add_coffee_modal(
