@@ -1,6 +1,6 @@
 use ratatui::{
     crossterm::event::{read, Event, KeyCode},
-    layout::{Constraint, Direction, Layout, Margin, Rect},
+    layout::{Constraint, Direction, HorizontalAlignment, Layout, Margin, Rect},
     style::{Color, Stylize},
     widgets::{Block, List, ListItem, Paragraph},
     {DefaultTerminal, Frame},
@@ -33,6 +33,7 @@ struct UiState {
     mode: Mode,
     focus: usize,
     coffee: Option<DraftCoffee>,
+    error: Option<String>,
 }
 
 #[derive(Default)]
@@ -80,6 +81,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 render_add_coffee_modal(
                     state.ui_state.focus,
                     &state.ui_state.coffee,
+                    &state.ui_state.error,
                     frame,
                     areas[1],
                 );
@@ -90,9 +92,11 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
             match state.ui_state.mode {
                 Mode::Normal => match key.code {
                     KeyCode::Char('q') => break Ok(()),
+                    KeyCode::Esc => break Ok(()),
                     KeyCode::Char('a') => {
                         state.ui_state.mode = Mode::Add;
                         state.ui_state.focus = 0;
+                        state.ui_state.error = None;
                     }
                     _ => (),
                 },
@@ -102,15 +106,22 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             (state.ui_state.focus + 1) % build_draft_fields().len()
                     }
                     KeyCode::Enter => {
-                        if let Some(draft) = state.ui_state.coffee.take() {
-                            let coffee =
-                                convert_draft_to_coffee(draft).expect("cannot pour this cup");
-                            add_coffee(coffee, &path).expect("cannot remember coffee");
-                            state.coffees = list_coffees(&path).expect("could not list coffees");
+                        if let Some(draft) = &state.ui_state.coffee {
+                            match convert_draft_to_coffee(draft) {
+                                Ok(coffee) => {
+                                    add_coffee(coffee, &path).expect("cannot remember coffee");
+                                    state.coffees =
+                                        list_coffees(&path).expect("could not list coffees");
+                                    state.ui_state.coffee = None;
+                                    state.ui_state.mode = Mode::Normal;
+                                }
+                                Err(e) => state.ui_state.error = Some(e.to_string()),
+                            }
                         }
-                        state.ui_state.mode = Mode::Normal;
                     }
+                    KeyCode::Esc => state.ui_state.mode = Mode::Normal,
                     KeyCode::Char(c) => {
+                        state.ui_state.error = None;
                         update_draft_coffee(&mut state.ui_state.coffee, state.ui_state.focus, c);
                     }
                     _ => (),
@@ -136,14 +147,25 @@ fn render_coffees(coffees: &[Coffee], frame: &mut Frame, area: Rect) {
 fn render_add_coffee_modal(
     focus: usize,
     coffee: &Option<DraftCoffee>,
+    error: &Option<String>,
     frame: &mut Frame,
     area: Rect,
 ) {
     let modal_area = area.inner(Margin::new(2, 1));
     let modal = Block::bordered().title("New coffee");
-    let field_area = modal.inner(modal_area);
+    let inner_modal_area = modal.inner(modal_area);
     frame.render_widget(modal, modal_area);
 
+    let draft_fields = build_draft_fields();
+
+    let inner_modal_areas = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(draft_fields.len() as u16),
+            Constraint::Min(0),
+            Constraint::Length(1),
+        ])
+        .split(inner_modal_area);
     let field_areas = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -153,8 +175,8 @@ fn render_add_coffee_modal(
             Constraint::Length(1),
             Constraint::Length(1),
         ])
-        .split(field_area);
-    build_draft_fields()
+        .split(inner_modal_areas[0]);
+    draft_fields
         .iter()
         .enumerate()
         .zip(field_areas.iter())
@@ -177,6 +199,12 @@ fn render_add_coffee_modal(
             let value = coffee.as_ref().map(value_accessor).unwrap_or_default();
             frame.render_widget(Paragraph::new(value), field_areas[1]);
         });
+    frame.render_widget(
+        Paragraph::new(error.as_deref().unwrap_or_default())
+            .fg(Color::Red)
+            .alignment(HorizontalAlignment::Right),
+        inner_modal_areas[inner_modal_areas.len() - 1],
+    );
 }
 
 fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: usize, c: char) {
@@ -211,15 +239,16 @@ fn build_draft_fields() -> Vec<Field> {
     ]
 }
 
-fn convert_draft_to_coffee(draft: DraftCoffee) -> Result<Coffee, Box<dyn std::error::Error>> {
+fn convert_draft_to_coffee(draft: &DraftCoffee) -> Result<Coffee, Box<dyn std::error::Error>> {
     Ok(Coffee {
-        name: draft.name.ok_or("name is required")?,
-        origin: draft.origin,
+        name: draft.name.clone().ok_or("name is required")?,
+        origin: draft.origin.clone(),
         varieties: draft
             .varieties
+            .clone()
             .map(|v| v.split(", ").map(|s| s.to_string()).collect()),
-        process: draft.process,
-        roaster: draft.roaster,
+        process: draft.process.clone(),
+        roaster: draft.roaster.clone(),
         ..Default::default()
     })
 }
