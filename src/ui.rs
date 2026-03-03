@@ -155,13 +155,15 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                         }
                     }
                     KeyCode::Esc => state.ui_state.mode = Mode::Normal,
-                    KeyCode::Char(c) => {
-                        state.ui_state.error = None;
+                    KeyCode::Backspace | KeyCode::Char(_) => {
                         update_draft_coffee(
                             &mut state.ui_state.coffee,
                             state.ui_state.add_focus,
-                            c,
+                            key.code,
                         );
+                        if matches!(key.code, KeyCode::Char(_)) {
+                            state.ui_state.error = None;
+                        }
                     }
                     _ => (),
                 },
@@ -273,17 +275,34 @@ fn build_draft_fields() -> Vec<DraftField> {
     ]
 }
 
-fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: usize, c: char) {
+fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: usize, keycode: KeyCode) {
     let coffee = coffee.get_or_insert_with(DraftCoffee::default);
     // indices are linked to build_draft_fields response
-    match focus {
-        0 => coffee.name.get_or_insert_with(String::new).push(c),
-        1 => coffee.origin.get_or_insert_with(String::new).push(c),
-        2 => coffee.varieties.get_or_insert_with(String::new).push(c),
-        3 => coffee.process.get_or_insert_with(String::new).push(c),
-        4 => coffee.roaster.get_or_insert_with(String::new).push(c),
+    match keycode {
+        KeyCode::Char(c) => match focus {
+            0 => coffee.name.get_or_insert_with(String::new).push(c),
+            1 => coffee.origin.get_or_insert_with(String::new).push(c),
+            2 => coffee.varieties.get_or_insert_with(String::new).push(c),
+            3 => coffee.process.get_or_insert_with(String::new).push(c),
+            4 => coffee.roaster.get_or_insert_with(String::new).push(c),
+            _ => (),
+        },
+        KeyCode::Backspace => match focus {
+            0 => pop_optional_char(&mut coffee.name),
+            1 => pop_optional_char(&mut coffee.origin),
+            2 => pop_optional_char(&mut coffee.varieties),
+            3 => pop_optional_char(&mut coffee.process),
+            4 => pop_optional_char(&mut coffee.roaster),
+            _ => (),
+        },
         _ => (),
-    };
+    }
+}
+
+fn pop_optional_char(field: &mut Option<String>) {
+    if let Some(s) = field.as_mut() {
+        s.pop();
+    }
 }
 
 fn convert_draft_to_coffee(draft: &DraftCoffee) -> Result<Coffee, Box<dyn std::error::Error>> {
