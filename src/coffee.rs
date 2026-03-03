@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter, Result};
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -31,6 +33,17 @@ pub enum GrindAdjustment {
     Coarser,
     Finer,
     MuchFiner,
+}
+
+impl Display for GrindAdjustment {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        match self {
+            GrindAdjustment::MuchCoarser => write!(f, "Much coarser"),
+            GrindAdjustment::Coarser => write!(f, "Coarser"),
+            GrindAdjustment::Finer => write!(f, "Much finer"),
+            GrindAdjustment::MuchFiner => write!(f, "Finer"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]

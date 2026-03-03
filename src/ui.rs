@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 use crate::app::{add_coffee, delete_coffee, list_coffees};
-use crate::coffee::Coffee;
+use crate::coffee::{BrewSettings, Coffee};
 
 const DIALED_IN: &str = r#"
 8888888b. d8b        888             8888888888         
@@ -54,6 +54,7 @@ pub struct DraftCoffee {
     pub decaf: Option<bool>,
     pub decaffeination_process: Option<String>,
     pub roaster: Option<String>,
+    pub brew_settings: Option<BrewSettings>,
 }
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -139,7 +140,8 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 Mode::Add => match key.code {
                     KeyCode::Tab => {
                         state.ui_state.add_focus = (state.ui_state.add_focus + 1)
-                            % build_draft_fields(&state.ui_state.coffee).len()
+                            % (build_fact_fields(&state.ui_state.coffee).len()
+                                + build_experience_fields(&state.ui_state.coffee).len())
                     }
                     KeyCode::Enter => {
                         if state.ui_state.add_focus == 5 {
@@ -229,22 +231,38 @@ fn render_add_coffee_modal(
     frame.render_widget(Clear, modal_area);
     frame.render_widget(modal, modal_area);
 
-    let draft_fields = build_draft_fields(coffee);
+    let fact_fields = build_fact_fields(coffee);
+    let experience_fields = build_experience_fields(coffee);
 
     let inner_modal_areas = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(draft_fields.len() as u16)])
+        .constraints([Constraint::Length(fact_fields.len() as u16)])
         .split(inner_modal_area);
     let field_areas = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(vec![Constraint::Length(1); draft_fields.len()])
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)])
         .split(inner_modal_areas[0]);
-    draft_fields
+    let fact_areas = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(vec![
+            Constraint::Length(1);
+            fact_fields.len().max(experience_fields.len())
+        ])
+        .split(field_areas[0]);
+    let experience_areas = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(vec![
+            Constraint::Length(1);
+            fact_fields.len().max(experience_fields.len())
+        ])
+        .split(field_areas[1]);
+
+    fact_fields
         .iter()
         .enumerate()
-        .zip(field_areas.iter())
+        .zip(fact_areas.iter())
         .for_each(|((index, (label, value_accessor)), area)| {
-            let field_areas = Layout::default()
+            let fact_areas = Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([
                     Constraint::Length(label.len() as u16 + 2),
@@ -254,23 +272,49 @@ fn render_add_coffee_modal(
             if index == focus {
                 frame.render_widget(
                     Paragraph::new(format!("{}: ", *label)).bg(Color::DarkGray),
-                    field_areas[0],
+                    fact_areas[0],
                 );
             } else {
-                frame.render_widget(Paragraph::new(format!("{}: ", *label)), field_areas[0]);
+                frame.render_widget(Paragraph::new(format!("{}: ", *label)), fact_areas[0]);
             }
             let value = coffee
                 .as_ref()
                 .map(value_accessor)
                 .unwrap_or_else(|| value_accessor(&DraftCoffee::default()));
-            frame.render_widget(Paragraph::new(value), field_areas[1]);
+            frame.render_widget(Paragraph::new(value), fact_areas[1]);
+        });
+    experience_fields
+        .iter()
+        .enumerate()
+        .zip(experience_areas.iter())
+        .for_each(|((index, (label, value_accessor)), area)| {
+            let experience_areas = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Length(label.len() as u16 + 2),
+                    Constraint::Min(0),
+                ])
+                .split(*area);
+            if index + fact_fields.len() == focus {
+                frame.render_widget(
+                    Paragraph::new(format!("{}: ", *label)).bg(Color::DarkGray),
+                    experience_areas[0],
+                );
+            } else {
+                frame.render_widget(Paragraph::new(format!("{}: ", *label)), experience_areas[0]);
+            }
+            let value = coffee
+                .as_ref()
+                .map(value_accessor)
+                .unwrap_or_else(|| value_accessor(&DraftCoffee::default()));
+            frame.render_widget(Paragraph::new(value), experience_areas[1]);
         });
     if let Some(message) = error {
         render_error(message, frame, inner_modal_area);
     }
 }
 
-fn build_draft_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
+fn build_fact_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     let mut fields: Vec<DraftField> = vec![
         ("Name", Box::new(|c| c.name.clone().unwrap_or_default())),
         ("Origin", Box::new(|c| c.origin.clone().unwrap_or_default())),
@@ -308,9 +352,36 @@ fn build_draft_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     fields
 }
 
+fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
+    let mut fields: Vec<DraftField> = vec![(
+        "Grind size",
+        Box::new(|c| {
+            c.brew_settings
+                .as_ref()
+                .map(|bs| bs.grind_size.to_string())
+                .unwrap_or_default()
+        }),
+    )];
+    if let Some(draft) = draft
+        && let Some(_) = &draft.brew_settings
+    {
+        fields.push((
+            "Adjustment",
+            Box::new(|c| {
+                c.brew_settings
+                    .as_ref()
+                    .and_then(|bs| bs.grind_size_adjustment.as_ref())
+                    .map(|gsa| gsa.to_string())
+                    .unwrap_or_default()
+            }),
+        ))
+    }
+    fields
+}
+
 fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: usize, keycode: KeyCode) {
     let coffee = coffee.get_or_insert_with(DraftCoffee::default);
-    // indices are linked to build_draft_fields response
+    // indices are linked to build_fact_fields response
     match keycode {
         KeyCode::Char(c) => match focus {
             0 => coffee.name.get_or_insert_with(String::new).push(c),
