@@ -84,7 +84,11 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 areas[1],
             );
 
-            if matches!(state.ui_state.mode, Mode::Add) {
+            if matches!(state.ui_state.mode, Mode::Normal) {
+                if let Some(message) = &state.ui_state.error {
+                    render_error(message, frame, areas[1]);
+                }
+            } else if matches!(state.ui_state.mode, Mode::Add) {
                 render_add_coffee_modal(
                     state.ui_state.add_focus,
                     &state.ui_state.coffee,
@@ -92,14 +96,12 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                     frame,
                     areas[1],
                 );
-            }
-
-            if matches!(state.ui_state.mode, Mode::Delete) {
-                if let Some(index) = state.ui_state.list_state.selected() {
-                    render_delete_coffee_modal(&state.coffees[index], frame, areas[1]);
-                } else {
-                    state.ui_state.mode = Mode::Normal;
-                }
+            } else if matches!(state.ui_state.mode, Mode::Delete) {
+                render_delete_coffee_modal(
+                    &state.coffees[state.ui_state.list_state.selected().expect("no selection")],
+                    frame,
+                    areas[1],
+                );
             }
         })?;
 
@@ -109,6 +111,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                     KeyCode::Char('q') => break Ok(()),
                     KeyCode::Esc => break Ok(()),
                     KeyCode::Tab => {
+                        state.ui_state.error = None;
                         if let Some(index) = state.ui_state.list_state.selected()
                             && index == state.coffees.len() - 1
                         {
@@ -122,7 +125,13 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                         state.ui_state.add_focus = 0;
                         state.ui_state.error = None;
                     }
-                    KeyCode::Char('d') => state.ui_state.mode = Mode::Delete,
+                    KeyCode::Char('d') => {
+                        if state.ui_state.list_state.selected().is_none() {
+                            state.ui_state.error = Some("Select a coffee to delete it".to_string());
+                        } else {
+                            state.ui_state.mode = Mode::Delete;
+                        }
+                    }
                     _ => (),
                 },
                 Mode::Add => match key.code {
@@ -211,11 +220,7 @@ fn render_add_coffee_modal(
 
     let inner_modal_areas = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(draft_fields.len() as u16),
-            Constraint::Min(0),
-            Constraint::Length(1),
-        ])
+        .constraints([Constraint::Length(draft_fields.len() as u16)])
         .split(inner_modal_area);
     let field_areas = Layout::default()
         .direction(Direction::Vertical)
@@ -244,12 +249,9 @@ fn render_add_coffee_modal(
             let value = coffee.as_ref().map(value_accessor).unwrap_or_default();
             frame.render_widget(Paragraph::new(value), field_areas[1]);
         });
-    frame.render_widget(
-        Paragraph::new(error.as_deref().unwrap_or_default())
-            .fg(Color::Red)
-            .alignment(HorizontalAlignment::Right),
-        inner_modal_areas[inner_modal_areas.len() - 1],
-    );
+    if let Some(message) = error {
+        render_error(message, frame, inner_modal_area);
+    }
 }
 
 fn build_draft_fields() -> Vec<DraftField> {
@@ -348,4 +350,17 @@ fn render_delete_coffee_modal(coffee: &Coffee, frame: &mut Frame, area: Rect) {
         .iter()
         .zip(field_areas.iter())
         .for_each(|(value, area)| frame.render_widget(Paragraph::new(value.as_str()), *area));
+}
+
+fn render_error(error: &str, frame: &mut Frame, area: Rect) {
+    let error_area = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(1)])
+        .split(area)[1];
+    frame.render_widget(
+        Paragraph::new(error)
+            .fg(Color::Red)
+            .alignment(HorizontalAlignment::Right),
+        error_area,
+    );
 }
