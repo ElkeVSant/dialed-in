@@ -20,7 +20,7 @@ const DIALED_IN: &str = r#"
 8888888P" 888"Y888888888 "Y8888  "Y888888888888888  888 "#;
 
 type DraftFieldAccessor = Box<dyn Fn(&DraftCoffee) -> String>;
-type DraftField = (&'static str, DraftFieldAccessor);
+type DraftField = (&'static str, AddFocus, DraftFieldAccessor);
 
 #[derive(Default)]
 struct State {
@@ -31,18 +31,64 @@ struct State {
 #[derive(Default)]
 struct UiState {
     mode: Mode,
-    add_focus: usize,
+    add_focus: AddFocus,
     list_state: ListState,
     coffee: Option<DraftCoffee>,
     error: Option<String>,
 }
 
-#[derive(Default)]
+#[derive(Default, PartialEq)]
 enum Mode {
     #[default]
     Normal,
     Add,
     Delete,
+}
+
+#[derive(Default, PartialEq)]
+enum AddFocus {
+    #[default]
+    Name,
+    Origin,
+    Varieties,
+    Process,
+    Roaster,
+    Decaf,
+    DecaffeinationProcess,
+    GrindSize,
+    GrindSizeAdjustment,
+}
+
+impl AddFocus {
+    fn next(&self, coffee: &Option<DraftCoffee>) -> AddFocus {
+        match self {
+            AddFocus::Name => AddFocus::Origin,
+            AddFocus::Origin => AddFocus::Varieties,
+            AddFocus::Varieties => AddFocus::Process,
+            AddFocus::Process => AddFocus::Roaster,
+            AddFocus::Roaster => AddFocus::Decaf,
+            AddFocus::Decaf => {
+                if let Some(coffee) = coffee
+                    && coffee.decaf.unwrap_or_default()
+                {
+                    AddFocus::DecaffeinationProcess
+                } else {
+                    AddFocus::GrindSize
+                }
+            }
+            AddFocus::DecaffeinationProcess => AddFocus::GrindSize,
+            AddFocus::GrindSize => {
+                if let Some(coffee) = coffee
+                    && coffee.brew_settings.is_some()
+                {
+                    AddFocus::GrindSizeAdjustment
+                } else {
+                    AddFocus::Name
+                }
+            }
+            AddFocus::GrindSizeAdjustment => AddFocus::Name,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -87,19 +133,19 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 areas[1],
             );
 
-            if matches!(state.ui_state.mode, Mode::Normal) {
+            if state.ui_state.mode == Mode::Normal {
                 if let Some(message) = &state.ui_state.error {
                     render_error(message, frame, areas[1]);
                 }
-            } else if matches!(state.ui_state.mode, Mode::Add) {
+            } else if state.ui_state.mode == Mode::Add {
                 render_add_coffee_modal(
-                    state.ui_state.add_focus,
+                    &state.ui_state.add_focus,
                     &state.ui_state.coffee,
                     &state.ui_state.error,
                     frame,
                     areas[1],
                 );
-            } else if matches!(state.ui_state.mode, Mode::Delete) {
+            } else if state.ui_state.mode == Mode::Delete {
                 render_delete_coffee_modal(
                     &state.coffees[state.ui_state.list_state.selected().expect("no selection")],
                     frame,
@@ -125,7 +171,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                     }
                     KeyCode::Char('a') => {
                         state.ui_state.mode = Mode::Add;
-                        state.ui_state.add_focus = 0;
+                        state.ui_state.add_focus = AddFocus::default();
                         state.ui_state.error = None;
                     }
                     KeyCode::Char('d') => {
@@ -139,12 +185,11 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 },
                 Mode::Add => match key.code {
                     KeyCode::Tab => {
-                        state.ui_state.add_focus = (state.ui_state.add_focus + 1)
-                            % (build_fact_fields(&state.ui_state.coffee).len()
-                                + build_experience_fields(&state.ui_state.coffee).len())
+                        state.ui_state.add_focus =
+                            state.ui_state.add_focus.next(&state.ui_state.coffee)
                     }
                     KeyCode::Enter => {
-                        if state.ui_state.add_focus == 5 {
+                        if state.ui_state.add_focus == AddFocus::Decaf {
                             let draft = state
                                 .ui_state
                                 .coffee
@@ -171,7 +216,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                     KeyCode::Backspace | KeyCode::Char(_) => {
                         update_draft_coffee(
                             &mut state.ui_state.coffee,
-                            state.ui_state.add_focus,
+                            &state.ui_state.add_focus,
                             key.code,
                         );
                         if matches!(key.code, KeyCode::Char(_)) {
@@ -219,7 +264,7 @@ fn render_coffees(state: &mut ListState, coffees: &[Coffee], frame: &mut Frame, 
 }
 
 fn render_add_coffee_modal(
-    focus: usize,
+    focus: &AddFocus,
     coffee: &Option<DraftCoffee>,
     error: &Option<String>,
     frame: &mut Frame,
@@ -257,11 +302,8 @@ fn render_add_coffee_modal(
         ])
         .split(field_areas[1]);
 
-    fact_fields
-        .iter()
-        .enumerate()
-        .zip(fact_areas.iter())
-        .for_each(|((index, (label, value_accessor)), area)| {
+    fact_fields.iter().zip(fact_areas.iter()).for_each(
+        |((label, focus_name, value_accessor), area)| {
             let fact_areas = Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([
@@ -269,7 +311,7 @@ fn render_add_coffee_modal(
                     Constraint::Min(0),
                 ])
                 .split(*area);
-            if index == focus {
+            if focus_name == focus {
                 frame.render_widget(
                     Paragraph::new(format!("{}: ", *label)).bg(Color::DarkGray),
                     fact_areas[0],
@@ -282,12 +324,12 @@ fn render_add_coffee_modal(
                 .map(value_accessor)
                 .unwrap_or_else(|| value_accessor(&DraftCoffee::default()));
             frame.render_widget(Paragraph::new(value), fact_areas[1]);
-        });
+        },
+    );
     experience_fields
         .iter()
-        .enumerate()
         .zip(experience_areas.iter())
-        .for_each(|((index, (label, value_accessor)), area)| {
+        .for_each(|((label, focus_name, value_accessor), area)| {
             let experience_areas = Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([
@@ -295,7 +337,7 @@ fn render_add_coffee_modal(
                     Constraint::Min(0),
                 ])
                 .split(*area);
-            if index + fact_fields.len() == focus {
+            if focus_name == focus {
                 frame.render_widget(
                     Paragraph::new(format!("{}: ", *label)).bg(Color::DarkGray),
                     experience_areas[0],
@@ -316,22 +358,34 @@ fn render_add_coffee_modal(
 
 fn build_fact_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     let mut fields: Vec<DraftField> = vec![
-        ("Name", Box::new(|c| c.name.clone().unwrap_or_default())),
-        ("Origin", Box::new(|c| c.origin.clone().unwrap_or_default())),
+        (
+            "Name",
+            AddFocus::Name,
+            Box::new(|c| c.name.clone().unwrap_or_default()),
+        ),
+        (
+            "Origin",
+            AddFocus::Origin,
+            Box::new(|c| c.origin.clone().unwrap_or_default()),
+        ),
         (
             "Varieties",
+            AddFocus::Varieties,
             Box::new(|c| c.varieties.clone().unwrap_or_default()),
         ),
         (
             "Process",
+            AddFocus::Process,
             Box::new(|c| c.process.clone().unwrap_or_default()),
         ),
         (
             "Roaster",
+            AddFocus::Roaster,
             Box::new(|c| c.roaster.clone().unwrap_or_default()),
         ),
         (
             "Decaf",
+            AddFocus::Decaf,
             Box::new(|c| {
                 if c.decaf.unwrap_or(false) {
                     "☑".to_string()
@@ -342,10 +396,11 @@ fn build_fact_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
         ),
     ];
     if let Some(draft) = draft
-        && matches!(draft.decaf, Some(true))
+        && draft.decaf == Some(true)
     {
         fields.push((
             "Decaffeination Process",
+            AddFocus::DecaffeinationProcess,
             Box::new(|c: &DraftCoffee| c.decaffeination_process.clone().unwrap_or_default()),
         ));
     }
@@ -355,6 +410,7 @@ fn build_fact_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
 fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     let mut fields: Vec<DraftField> = vec![(
         "Grind size",
+        AddFocus::GrindSize,
         Box::new(|c| {
             c.brew_settings
                 .as_ref()
@@ -367,6 +423,7 @@ fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     {
         fields.push((
             "Adjustment",
+            AddFocus::GrindSizeAdjustment,
             Box::new(|c| {
                 c.brew_settings
                     .as_ref()
@@ -379,31 +436,32 @@ fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     fields
 }
 
-fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: usize, keycode: KeyCode) {
+fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, keycode: KeyCode) {
     let coffee = coffee.get_or_insert_with(DraftCoffee::default);
-    // indices are linked to build_fact_fields response
     match keycode {
         KeyCode::Char(c) => match focus {
-            0 => coffee.name.get_or_insert_with(String::new).push(c),
-            1 => coffee.origin.get_or_insert_with(String::new).push(c),
-            2 => coffee.varieties.get_or_insert_with(String::new).push(c),
-            3 => coffee.process.get_or_insert_with(String::new).push(c),
-            4 => coffee.roaster.get_or_insert_with(String::new).push(c),
+            AddFocus::Name => coffee.name.get_or_insert_with(String::new).push(c),
+            AddFocus::Origin => coffee.origin.get_or_insert_with(String::new).push(c),
+            AddFocus::Varieties => coffee.varieties.get_or_insert_with(String::new).push(c),
+            AddFocus::Process => coffee.process.get_or_insert_with(String::new).push(c),
+            AddFocus::Roaster => coffee.roaster.get_or_insert_with(String::new).push(c),
             // 5 (decaf) is handled in the event loop (Enter branch)
-            6 => coffee
+            AddFocus::DecaffeinationProcess => coffee
                 .decaffeination_process
                 .get_or_insert_with(String::new)
                 .push(c),
             _ => (),
         },
         KeyCode::Backspace => match focus {
-            0 => pop_optional_char(&mut coffee.name),
-            1 => pop_optional_char(&mut coffee.origin),
-            2 => pop_optional_char(&mut coffee.varieties),
-            3 => pop_optional_char(&mut coffee.process),
-            4 => pop_optional_char(&mut coffee.roaster),
+            AddFocus::Name => pop_optional_char(&mut coffee.name),
+            AddFocus::Origin => pop_optional_char(&mut coffee.origin),
+            AddFocus::Varieties => pop_optional_char(&mut coffee.varieties),
+            AddFocus::Process => pop_optional_char(&mut coffee.process),
+            AddFocus::Roaster => pop_optional_char(&mut coffee.roaster),
             // 5 (decaf) is handled in the event loop (Enter branch)
-            6 => pop_optional_char(&mut coffee.decaffeination_process),
+            AddFocus::DecaffeinationProcess => {
+                pop_optional_char(&mut coffee.decaffeination_process)
+            }
             _ => (),
         },
         _ => (),
