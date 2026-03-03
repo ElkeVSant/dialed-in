@@ -384,7 +384,7 @@ fn render_delete_coffee_modal(coffee: &Coffee, frame: &mut Frame, area: Rect) {
     frame.render_widget(Clear, modal_area);
     frame.render_widget(modal, modal_area);
 
-    let coffee_fields = [
+    let mut coffee_fields = vec![
         format!("Name: {}", coffee.name),
         format!("Origin: {}", coffee.origin.as_deref().unwrap_or_default()),
         format!(
@@ -393,7 +393,24 @@ fn render_delete_coffee_modal(coffee: &Coffee, frame: &mut Frame, area: Rect) {
         ),
         format!("Process: {}", coffee.process.as_deref().unwrap_or_default()),
         format!("Roaster: {}", coffee.roaster.as_deref().unwrap_or_default()),
+        format!(
+            "Decaf: {}",
+            if coffee.decaf.unwrap_or_default() {
+                "☑"
+            } else {
+                "☐"
+            }
+        ),
     ];
+
+    if let Some(decaf) = coffee.decaf
+        && decaf
+    {
+        coffee_fields.push(format!(
+            "Decaffeination process: {}",
+            coffee.decaffeination_process.as_deref().unwrap_or_default()
+        ))
+    }
 
     let inner_modal_areas = Layout::default()
         .direction(Direction::Vertical)
