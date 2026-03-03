@@ -51,6 +51,8 @@ pub struct DraftCoffee {
     pub origin: Option<String>,
     pub varieties: Option<String>,
     pub process: Option<String>,
+    pub decaf: Option<bool>,
+    pub decaffeination_process: Option<String>,
     pub roaster: Option<String>,
 }
 
@@ -136,11 +138,17 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 },
                 Mode::Add => match key.code {
                     KeyCode::Tab => {
-                        state.ui_state.add_focus =
-                            (state.ui_state.add_focus + 1) % build_draft_fields().len()
+                        state.ui_state.add_focus = (state.ui_state.add_focus + 1)
+                            % build_draft_fields(&state.ui_state.coffee).len()
                     }
                     KeyCode::Enter => {
-                        if let Some(draft) = &state.ui_state.coffee {
+                        if state.ui_state.add_focus == 5 {
+                            let draft = state
+                                .ui_state
+                                .coffee
+                                .get_or_insert_with(DraftCoffee::default);
+                            draft.decaf = Some(!draft.decaf.unwrap_or_default());
+                        } else if let Some(draft) = &state.ui_state.coffee {
                             match convert_draft_to_coffee(draft) {
                                 Ok(coffee) => {
                                     add_coffee(coffee, &path).expect("cannot remember coffee");
@@ -154,7 +162,10 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             }
                         }
                     }
-                    KeyCode::Esc => state.ui_state.mode = Mode::Normal,
+                    KeyCode::Esc => {
+                        state.ui_state.coffee = None;
+                        state.ui_state.mode = Mode::Normal;
+                    }
                     KeyCode::Backspace | KeyCode::Char(_) => {
                         update_draft_coffee(
                             &mut state.ui_state.coffee,
@@ -218,7 +229,7 @@ fn render_add_coffee_modal(
     frame.render_widget(Clear, modal_area);
     frame.render_widget(modal, modal_area);
 
-    let draft_fields = build_draft_fields();
+    let draft_fields = build_draft_fields(coffee);
 
     let inner_modal_areas = Layout::default()
         .direction(Direction::Vertical)
@@ -226,7 +237,7 @@ fn render_add_coffee_modal(
         .split(inner_modal_area);
     let field_areas = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(vec![Constraint::Length(1); 5])
+        .constraints(vec![Constraint::Length(1); draft_fields.len()])
         .split(inner_modal_areas[0]);
     draft_fields
         .iter()
@@ -248,7 +259,10 @@ fn render_add_coffee_modal(
             } else {
                 frame.render_widget(Paragraph::new(format!("{}: ", *label)), field_areas[0]);
             }
-            let value = coffee.as_ref().map(value_accessor).unwrap_or_default();
+            let value = coffee
+                .as_ref()
+                .map(value_accessor)
+                .unwrap_or_else(|| value_accessor(&DraftCoffee::default()));
             frame.render_widget(Paragraph::new(value), field_areas[1]);
         });
     if let Some(message) = error {
@@ -256,8 +270,8 @@ fn render_add_coffee_modal(
     }
 }
 
-fn build_draft_fields() -> Vec<DraftField> {
-    vec![
+fn build_draft_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
+    let mut fields: Vec<DraftField> = vec![
         ("Name", Box::new(|c| c.name.clone().unwrap_or_default())),
         ("Origin", Box::new(|c| c.origin.clone().unwrap_or_default())),
         (
@@ -272,7 +286,26 @@ fn build_draft_fields() -> Vec<DraftField> {
             "Roaster",
             Box::new(|c| c.roaster.clone().unwrap_or_default()),
         ),
-    ]
+        (
+            "Decaf",
+            Box::new(|c| {
+                if c.decaf.unwrap_or(false) {
+                    "☑".to_string()
+                } else {
+                    "☐".to_string()
+                }
+            }),
+        ),
+    ];
+    if let Some(draft) = draft
+        && matches!(draft.decaf, Some(true))
+    {
+        fields.push((
+            "Decaffeination Process",
+            Box::new(|c: &DraftCoffee| c.decaffeination_process.clone().unwrap_or_default()),
+        ));
+    }
+    fields
 }
 
 fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: usize, keycode: KeyCode) {
@@ -285,6 +318,11 @@ fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: usize, keycode: 
             2 => coffee.varieties.get_or_insert_with(String::new).push(c),
             3 => coffee.process.get_or_insert_with(String::new).push(c),
             4 => coffee.roaster.get_or_insert_with(String::new).push(c),
+            // 5 (decaf) is handled in the event loop (Enter branch)
+            6 => coffee
+                .decaffeination_process
+                .get_or_insert_with(String::new)
+                .push(c),
             _ => (),
         },
         KeyCode::Backspace => match focus {
@@ -293,6 +331,8 @@ fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: usize, keycode: 
             2 => pop_optional_char(&mut coffee.varieties),
             3 => pop_optional_char(&mut coffee.process),
             4 => pop_optional_char(&mut coffee.roaster),
+            // 5 (decaf) is handled in the event loop (Enter branch)
+            6 => pop_optional_char(&mut coffee.decaffeination_process),
             _ => (),
         },
         _ => (),
@@ -315,6 +355,8 @@ fn convert_draft_to_coffee(draft: &DraftCoffee) -> Result<Coffee, Box<dyn std::e
             .map(|v| v.split(", ").map(|s| s.to_string()).collect()),
         process: draft.process.clone(),
         roaster: draft.roaster.clone(),
+        decaf: draft.decaf,
+        decaffeination_process: draft.decaffeination_process.clone(),
         ..Default::default()
     })
 }
@@ -362,7 +404,7 @@ fn render_delete_coffee_modal(coffee: &Coffee, frame: &mut Frame, area: Rect) {
         .split(inner_modal_area);
     let field_areas = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(vec![Constraint::Length(1); 5])
+        .constraints(vec![Constraint::Length(1); coffee_fields.len()])
         .split(inner_modal_areas[0]);
 
     coffee_fields
