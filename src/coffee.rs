@@ -74,8 +74,8 @@ pub struct Rating {
     pub aftertaste: Option<Score>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Score {
-    pub strength: u8,
-    pub personal: u8,
+    pub strength: Option<u8>,
+    pub personal: Option<u8>,
 }
