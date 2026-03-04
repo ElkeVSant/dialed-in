@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 use crate::app::{add_coffee, delete_coffee, list_coffees};
-use crate::coffee::{BrewSettings, Coffee};
+use crate::coffee::{BrewSettings, Coffee, GrindAdjustment};
 
 const DIALED_IN: &str = r#"
 8888888b. d8b        888             8888888888         
@@ -100,7 +100,13 @@ pub struct DraftCoffee {
     pub decaf: Option<bool>,
     pub decaffeination_process: Option<String>,
     pub roaster: Option<String>,
-    pub brew_settings: Option<BrewSettings>,
+    pub brew_settings: Option<DraftBrewSettings>,
+}
+
+#[derive(Default)]
+pub struct DraftBrewSettings {
+    pub grind_size: Option<String>,
+    pub grind_size_adjustment: Option<GrindAdjustment>,
 }
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -214,13 +220,34 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                         state.ui_state.mode = Mode::Normal;
                     }
                     KeyCode::Backspace | KeyCode::Char(_) => {
-                        update_draft_coffee(
-                            &mut state.ui_state.coffee,
-                            &state.ui_state.add_focus,
-                            key.code,
-                        );
-                        if matches!(key.code, KeyCode::Char(_)) {
-                            state.ui_state.error = None;
+                        if state.ui_state.add_focus == AddFocus::GrindSizeAdjustment {
+                            let bs = state
+                                .ui_state
+                                .coffee
+                                .get_or_insert_with(DraftCoffee::default)
+                                .brew_settings
+                                .as_mut()
+                                .expect("no brew settings exist");
+                            if key.code == KeyCode::Char('+') {
+                                bs.grind_size_adjustment = match &bs.grind_size_adjustment {
+                                    Some(gsa) => gsa.coarser(),
+                                    None => Some(GrindAdjustment::Coarser),
+                                }
+                            } else if key.code == KeyCode::Char('-') {
+                                bs.grind_size_adjustment = match &bs.grind_size_adjustment {
+                                    Some(gsa) => gsa.finer(),
+                                    None => Some(GrindAdjustment::Finer),
+                                }
+                            }
+                        } else {
+                            update_draft_coffee(
+                                &mut state.ui_state.coffee,
+                                &state.ui_state.add_focus,
+                                key.code,
+                            );
+                            if matches!(key.code, KeyCode::Char(_)) {
+                                state.ui_state.error = None;
+                            }
                         }
                     }
                     _ => (),
@@ -414,7 +441,7 @@ fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
         Box::new(|c| {
             c.brew_settings
                 .as_ref()
-                .map(|bs| bs.grind_size.to_string())
+                .and_then(|bs| bs.grind_size.clone())
                 .unwrap_or_default()
         }),
     )];
@@ -450,6 +477,12 @@ fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, keyco
                 .decaffeination_process
                 .get_or_insert_with(String::new)
                 .push(c),
+            AddFocus::GrindSize => coffee
+                .brew_settings
+                .get_or_insert_with(DraftBrewSettings::default)
+                .grind_size
+                .get_or_insert_with(String::new)
+                .push(c),
             _ => (),
         },
         KeyCode::Backspace => match focus {
@@ -461,6 +494,21 @@ fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, keyco
             // 5 (decaf) is handled in the event loop (Enter branch)
             AddFocus::DecaffeinationProcess => {
                 pop_optional_char(&mut coffee.decaffeination_process)
+            }
+            AddFocus::GrindSize => {
+                let dbs = coffee
+                    .brew_settings
+                    .get_or_insert_with(DraftBrewSettings::default);
+                pop_optional_char(
+                    &mut dbs
+                        // &mut coffee
+                        //     .brew_settings
+                        //     .get_or_insert_with(DraftBrewSettings::default)
+                        .grind_size,
+                );
+                if dbs.grind_size.as_deref() == Some("") {
+                    coffee.brew_settings = None;
+                }
             }
             _ => (),
         },
@@ -486,6 +534,21 @@ fn convert_draft_to_coffee(draft: &DraftCoffee) -> Result<Coffee, Box<dyn std::e
         roaster: draft.roaster.clone(),
         decaf: draft.decaf,
         decaffeination_process: draft.decaffeination_process.clone(),
+        brew_settings: draft
+            .brew_settings
+            .as_ref()
+            .map(|bs| -> Result<BrewSettings, Box<dyn std::error::Error>> {
+                Ok(BrewSettings {
+                    grind_size: bs
+                        .grind_size
+                        .as_deref()
+                        .expect("brew settings without grind size")
+                        .parse::<f32>()
+                        .map_err(|_| "invalid grind size")?,
+                    grind_size_adjustment: bs.grind_size_adjustment,
+                })
+            })
+            .transpose()?,
         ..Default::default()
     })
 }

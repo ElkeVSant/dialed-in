@@ -27,7 +27,7 @@ pub struct BrewSettings {
     pub grind_size_adjustment: Option<GrindAdjustment>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GrindAdjustment {
     MuchCoarser,
     Coarser,
@@ -40,8 +40,27 @@ impl Display for GrindAdjustment {
         match self {
             GrindAdjustment::MuchCoarser => write!(f, "Much coarser"),
             GrindAdjustment::Coarser => write!(f, "Coarser"),
-            GrindAdjustment::Finer => write!(f, "Much finer"),
-            GrindAdjustment::MuchFiner => write!(f, "Finer"),
+            GrindAdjustment::Finer => write!(f, "Finer"),
+            GrindAdjustment::MuchFiner => write!(f, "Much Finer"),
+        }
+    }
+}
+
+impl GrindAdjustment {
+    pub fn coarser(&self) -> Option<GrindAdjustment> {
+        match self {
+            GrindAdjustment::MuchCoarser => Some(GrindAdjustment::MuchCoarser),
+            GrindAdjustment::Coarser => Some(GrindAdjustment::MuchCoarser),
+            GrindAdjustment::Finer => None,
+            GrindAdjustment::MuchFiner => Some(GrindAdjustment::Finer),
+        }
+    }
+    pub fn finer(&self) -> Option<GrindAdjustment> {
+        match self {
+            GrindAdjustment::MuchCoarser => Some(GrindAdjustment::Coarser),
+            GrindAdjustment::Coarser => None,
+            GrindAdjustment::Finer => Some(GrindAdjustment::MuchFiner),
+            GrindAdjustment::MuchFiner => Some(GrindAdjustment::MuchFiner),
         }
     }
 }
