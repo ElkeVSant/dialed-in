@@ -232,6 +232,13 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                                     .as_mut()
                                     .expect("no coffee to adjust")
                                     .grind_finer();
+                            } else if key.code == KeyCode::Backspace {
+                                state
+                                    .ui_state
+                                    .coffee
+                                    .as_mut()
+                                    .expect("no coffee to adjust")
+                                    .reset_grind_adjustment();
                             }
                         } else {
                             update_draft_coffee(

@@ -40,6 +40,12 @@ impl DraftCoffee {
             None => Some(GrindAdjustment::Finer),
         };
     }
+    pub fn reset_grind_adjustment(&mut self) {
+        self.brew_settings
+            .as_mut()
+            .expect("no brew settings exist")
+            .grind_size_adjustment = None;
+    }
 }
 
 pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, keycode: KeyCode) {
