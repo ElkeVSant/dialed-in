@@ -5,7 +5,7 @@ use crate::coffee::Coffee;
 
 pub fn store(coffees: Vec<Coffee>, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let content = serde_json::to_string(&coffees)?;
-    fs::create_dir_all(&path)?;
+    fs::create_dir_all(path)?;
     fs::write(path.join("coffee_feedback.json"), content)?;
     Ok(())
 }
