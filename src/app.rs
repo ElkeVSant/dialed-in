@@ -44,11 +44,11 @@ pub fn list_coffees(path: &Path) -> Result<Vec<Coffee>, Box<dyn std::error::Erro
     Ok(coffees)
 }
 
-fn list_origins(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+pub fn list_origins(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     list_string_fields(path, |c| c.origin.clone())
 }
 
-fn list_varieties(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+pub fn list_varieties(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let coffees = list_coffees(path)?;
     let varieties: HashSet<String> = coffees
         .iter()
@@ -61,15 +61,17 @@ fn list_varieties(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>
     Ok(varieties)
 }
 
-fn list_processes(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+pub fn list_processes(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     list_string_fields(path, |c| c.process.clone())
 }
 
-fn list_decaffeination_processes(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+pub fn list_decaffeination_processes(
+    path: &Path,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     list_string_fields(path, |c| c.decaffeination_process.clone())
 }
 
-fn list_roasters(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+pub fn list_roasters(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     list_string_fields(path, |c| c.roaster.clone())
 }
 

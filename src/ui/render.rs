@@ -2,6 +2,7 @@ use ratatui::{
     Frame,
     layout::{Constraint, Direction, HorizontalAlignment, Layout, Margin, Rect},
     style::{Color, Style, Stylize},
+    text::{Line, Span},
     widgets::{Block, Clear, List, ListItem, ListState, Paragraph},
 };
 
@@ -34,6 +35,7 @@ pub fn render_coffees(state: &mut ListState, coffees: &[Coffee], frame: &mut Fra
 
 pub fn render_add_coffee_modal(
     focus: &AddFocus,
+    suggestions: &Option<Vec<String>>,
     coffee: &Option<DraftCoffee>,
     error: &Option<String>,
     frame: &mut Frame,
@@ -77,7 +79,7 @@ pub fn render_add_coffee_modal(
         .iter()
         .zip(fact_areas.iter())
         .for_each(|(field, area)| {
-            if let DraftField::Field(label, focus_name, value_accessor) = field {
+            if let DraftField::Field(label, focus_name, value_accessor, input_extractor) = field {
                 let fact_areas = Layout::default()
                     .direction(Direction::Horizontal)
                     .constraints([
@@ -93,11 +95,31 @@ pub fn render_add_coffee_modal(
                 } else {
                     frame.render_widget(Paragraph::new(format!("{}: ", *label)), fact_areas[0]);
                 }
+                // retrieve values from default DraftCoffee to ensure None values like the default
+                // decaf checkbox are rendered as expected
                 let value = coffee
                     .as_ref()
                     .map(value_accessor)
                     .unwrap_or_else(|| value_accessor(&DraftCoffee::default()));
-                frame.render_widget(Paragraph::new(value), fact_areas[1]);
+                let mut suggestion_span = Span::raw("");
+                if let Some(suggestions) = suggestions
+                    && !value.is_empty()
+                {
+                    let match_input = match input_extractor {
+                        Some(ie) => ie(&value),
+                        None => value.clone(),
+                    };
+                    let suggestions: Vec<&String> = suggestions
+                        .iter()
+                        .filter(|s| s.starts_with(match_input.as_str()))
+                        .collect();
+                    if !suggestions.is_empty() {
+                        let suggestion = &suggestions[0][match_input.len()..];
+                        suggestion_span = Span::raw(suggestion).fg(Color::DarkGray);
+                    }
+                }
+                let line = Line::from(vec![Span::raw(value).fg(Color::White), suggestion_span]);
+                frame.render_widget(line, fact_areas[1]);
             }
         });
     experience_fields
@@ -107,7 +129,7 @@ pub fn render_add_coffee_modal(
             DraftField::Header(label) => {
                 frame.render_widget(Paragraph::new(format!("{}: ", *label)), *area)
             }
-            DraftField::Field(label, focus_name, value_accessor) => {
+            DraftField::Field(label, focus_name, value_accessor, _) => {
                 let experience_areas = Layout::default()
                     .direction(Direction::Horizontal)
                     .constraints([
@@ -126,6 +148,8 @@ pub fn render_add_coffee_modal(
                         experience_areas[0],
                     );
                 }
+                // retrieve values from default DraftCoffee to ensure placeholders like the rating
+                // circles are rendered as expected
                 let value = coffee
                     .as_ref()
                     .map(value_accessor)

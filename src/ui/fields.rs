@@ -1,10 +1,11 @@
 use crate::ui::{AddFocus, DraftCoffee};
 
 type DraftFieldAccessor = Box<dyn Fn(&DraftCoffee) -> String>;
+type InputExtractor = Option<Box<dyn Fn(&str) -> String>>;
 
 pub enum DraftField {
     Header(&'static str),
-    Field(&'static str, AddFocus, DraftFieldAccessor),
+    Field(&'static str, AddFocus, DraftFieldAccessor, InputExtractor),
     Spacing,
 }
 
@@ -14,26 +15,31 @@ pub fn build_fact_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
             "Name",
             AddFocus::Name,
             Box::new(|c| c.name.clone().unwrap_or_default()),
+            None,
         ),
         DraftField::Field(
             "Origin",
             AddFocus::Origin,
             Box::new(|c| c.origin.clone().unwrap_or_default()),
+            None,
         ),
         DraftField::Field(
             "Varieties",
             AddFocus::Varieties,
             Box::new(|c| c.varieties.clone().unwrap_or_default()),
+            Some(Box::new(|v| v.split(", ").last().unwrap_or("").to_string())),
         ),
         DraftField::Field(
             "Process",
             AddFocus::Process,
             Box::new(|c| c.process.clone().unwrap_or_default()),
+            None,
         ),
         DraftField::Field(
             "Roaster",
             AddFocus::Roaster,
             Box::new(|c| c.roaster.clone().unwrap_or_default()),
+            None,
         ),
         DraftField::Field(
             "Decaf",
@@ -45,6 +51,7 @@ pub fn build_fact_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
                     "☐".to_string()
                 }
             }),
+            None,
         ),
     ];
     if let Some(draft) = draft
@@ -54,6 +61,7 @@ pub fn build_fact_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
             "Decaffeination Process",
             AddFocus::DecaffeinationProcess,
             Box::new(|c: &DraftCoffee| c.decaffeination_process.clone().unwrap_or_default()),
+            None,
         ));
     }
     fields
@@ -69,6 +77,7 @@ pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
                 .and_then(|bs| bs.grind_size.clone())
                 .unwrap_or_default()
         }),
+        None,
     )];
     if let Some(draft) = draft
         && draft.brew_settings.is_some()
@@ -83,6 +92,7 @@ pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
                     .map(|gsa| gsa.to_string())
                     .unwrap_or_default()
             }),
+            None,
         ))
     } else {
         fields.push(DraftField::Spacing)
@@ -101,6 +111,7 @@ pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
                         .unwrap_or(0),
                 )
             }),
+            None,
         ),
         DraftField::Field(
             " Personal",
@@ -114,6 +125,7 @@ pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
                         .unwrap_or(0),
                 )
             }),
+            None,
         ),
         DraftField::Header("Sweetness"),
         DraftField::Field(
@@ -128,6 +140,7 @@ pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
                         .unwrap_or(0),
                 )
             }),
+            None,
         ),
         DraftField::Field(
             " Personal",
@@ -141,6 +154,7 @@ pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
                         .unwrap_or(0),
                 )
             }),
+            None,
         ),
         DraftField::Header("Acidity"),
         DraftField::Field(
@@ -155,6 +169,7 @@ pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
                         .unwrap_or(0),
                 )
             }),
+            None,
         ),
         DraftField::Field(
             " Personal",
@@ -168,6 +183,7 @@ pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
                         .unwrap_or(0),
                 )
             }),
+            None,
         ),
         DraftField::Header("Body"),
         DraftField::Field(
@@ -182,6 +198,7 @@ pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
                         .unwrap_or(0),
                 )
             }),
+            None,
         ),
         DraftField::Field(
             " Personal",
@@ -195,6 +212,7 @@ pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
                         .unwrap_or(0),
                 )
             }),
+            None,
         ),
         DraftField::Header("Aftertaste"),
         DraftField::Field(
@@ -209,6 +227,7 @@ pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
                         .unwrap_or(0),
                 )
             }),
+            None,
         ),
         DraftField::Field(
             " Personal",
@@ -222,6 +241,7 @@ pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
                         .unwrap_or(0),
                 )
             }),
+            None,
         ),
     ];
     fields.append(&mut rating_fields);
