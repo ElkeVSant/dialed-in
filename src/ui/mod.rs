@@ -49,13 +49,13 @@ enum Mode {
 
 #[derive(Default)]
 struct InputModalState {
-    focus: AddFocus,
+    focus: InputFocus,
     coffee: Option<DraftCoffee>,
     suggestions: Option<Vec<String>>,
 }
 
 #[derive(Default, PartialEq)]
-enum AddFocus {
+enum InputFocus {
     #[default]
     Name,
     Origin,
@@ -78,54 +78,94 @@ enum AddFocus {
     AftertastePersonal,
 }
 
-impl AddFocus {
-    fn next(&self, coffee: &Option<DraftCoffee>) -> AddFocus {
+impl InputFocus {
+    fn next(&self, coffee: &Option<DraftCoffee>) -> InputFocus {
         match self {
-            AddFocus::Name => AddFocus::Origin,
-            AddFocus::Origin => AddFocus::Varieties,
-            AddFocus::Varieties => AddFocus::Process,
-            AddFocus::Process => AddFocus::Roaster,
-            AddFocus::Roaster => AddFocus::Decaf,
-            AddFocus::Decaf => {
+            InputFocus::Name => InputFocus::Origin,
+            InputFocus::Origin => InputFocus::Varieties,
+            InputFocus::Varieties => InputFocus::Process,
+            InputFocus::Process => InputFocus::Roaster,
+            InputFocus::Roaster => InputFocus::Decaf,
+            InputFocus::Decaf => {
                 if let Some(coffee) = coffee
                     && coffee.decaf.unwrap_or_default()
                 {
-                    AddFocus::DecaffeinationProcess
+                    InputFocus::DecaffeinationProcess
                 } else {
-                    AddFocus::GrindSize
+                    InputFocus::DecaffeinationProcess.next(coffee)
                 }
             }
-            AddFocus::DecaffeinationProcess => AddFocus::GrindSize,
-            AddFocus::GrindSize => {
+            InputFocus::DecaffeinationProcess => InputFocus::GrindSize,
+            InputFocus::GrindSize => {
                 if let Some(coffee) = coffee
                     && coffee.brew_settings.is_some()
                 {
-                    AddFocus::GrindSizeAdjustment
+                    InputFocus::GrindSizeAdjustment
                 } else {
-                    AddFocus::GrindSizeAdjustment.next(coffee)
+                    InputFocus::GrindSizeAdjustment.next(coffee)
                 }
             }
-            AddFocus::GrindSizeAdjustment => AddFocus::AromaStrength,
-            AddFocus::AromaStrength => AddFocus::AromaPersonal,
-            AddFocus::AromaPersonal => AddFocus::SweetnessStrength,
-            AddFocus::SweetnessStrength => AddFocus::SweetnessPersonal,
-            AddFocus::SweetnessPersonal => AddFocus::AcidityStrength,
-            AddFocus::AcidityStrength => AddFocus::AcidityPersonal,
-            AddFocus::AcidityPersonal => AddFocus::BodyStrength,
-            AddFocus::BodyStrength => AddFocus::BodyPersonal,
-            AddFocus::BodyPersonal => AddFocus::AftertasteStrength,
-            AddFocus::AftertasteStrength => AddFocus::AftertastePersonal,
-            AddFocus::AftertastePersonal => AddFocus::Name,
+            InputFocus::GrindSizeAdjustment => InputFocus::AromaStrength,
+            InputFocus::AromaStrength => InputFocus::AromaPersonal,
+            InputFocus::AromaPersonal => InputFocus::SweetnessStrength,
+            InputFocus::SweetnessStrength => InputFocus::SweetnessPersonal,
+            InputFocus::SweetnessPersonal => InputFocus::AcidityStrength,
+            InputFocus::AcidityStrength => InputFocus::AcidityPersonal,
+            InputFocus::AcidityPersonal => InputFocus::BodyStrength,
+            InputFocus::BodyStrength => InputFocus::BodyPersonal,
+            InputFocus::BodyPersonal => InputFocus::AftertasteStrength,
+            InputFocus::AftertasteStrength => InputFocus::AftertastePersonal,
+            InputFocus::AftertastePersonal => InputFocus::Name,
+        }
+    }
+
+    fn previous(&self, coffee: &Option<DraftCoffee>) -> InputFocus {
+        match self {
+            InputFocus::Name => InputFocus::AftertastePersonal,
+            InputFocus::Origin => InputFocus::Name,
+            InputFocus::Varieties => InputFocus::Origin,
+            InputFocus::Process => InputFocus::Varieties,
+            InputFocus::Roaster => InputFocus::Process,
+            InputFocus::Decaf => InputFocus::Roaster,
+            InputFocus::DecaffeinationProcess => InputFocus::Decaf,
+            InputFocus::GrindSize => {
+                if let Some(coffee) = coffee
+                    && coffee.decaf.unwrap_or_default()
+                {
+                    InputFocus::DecaffeinationProcess
+                } else {
+                    InputFocus::DecaffeinationProcess.previous(coffee)
+                }
+            }
+            InputFocus::GrindSizeAdjustment => InputFocus::GrindSize,
+            InputFocus::AromaStrength => {
+                if let Some(coffee) = coffee
+                    && coffee.brew_settings.is_some()
+                {
+                    InputFocus::GrindSizeAdjustment
+                } else {
+                    InputFocus::GrindSizeAdjustment.previous(coffee)
+                }
+            }
+            InputFocus::AromaPersonal => InputFocus::AromaStrength,
+            InputFocus::SweetnessStrength => InputFocus::AromaPersonal,
+            InputFocus::SweetnessPersonal => InputFocus::SweetnessStrength,
+            InputFocus::AcidityStrength => InputFocus::SweetnessPersonal,
+            InputFocus::AcidityPersonal => InputFocus::AcidityStrength,
+            InputFocus::BodyStrength => InputFocus::AcidityPersonal,
+            InputFocus::BodyPersonal => InputFocus::BodyStrength,
+            InputFocus::AftertasteStrength => InputFocus::BodyPersonal,
+            InputFocus::AftertastePersonal => InputFocus::AftertasteStrength,
         }
     }
 
     fn load_suggestions(&self, path: &Path) -> Option<Vec<String>> {
         match self {
-            AddFocus::Process => list_processes(path).ok(),
-            AddFocus::Origin => list_origins(path).ok(),
-            AddFocus::Varieties => list_varieties(path).ok(),
-            AddFocus::Roaster => list_roasters(path).ok(),
-            AddFocus::DecaffeinationProcess => list_decaffeination_processes(path).ok(),
+            InputFocus::Process => list_processes(path).ok(),
+            InputFocus::Origin => list_origins(path).ok(),
+            InputFocus::Varieties => list_varieties(path).ok(),
+            InputFocus::Roaster => list_roasters(path).ok(),
+            InputFocus::DecaffeinationProcess => list_decaffeination_processes(path).ok(),
             _ => None,
         }
     }
@@ -208,6 +248,16 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             state.ui_state.list_state.select_next();
                         }
                     }
+                    KeyCode::BackTab => {
+                        state.ui_state.error = None;
+                        if let Some(index) = state.ui_state.list_state.selected()
+                            && index == 0
+                        {
+                            state.ui_state.list_state.select_last();
+                        } else {
+                            state.ui_state.list_state.select_previous();
+                        }
+                    }
                     KeyCode::Char('a') => {
                         state.ui_state.mode = Mode::Add;
                         state.ui_state.input_state = Some(InputModalState::default());
@@ -251,8 +301,12 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             mode_state.focus = mode_state.focus.next(&mode_state.coffee);
                             mode_state.suggestions = mode_state.focus.load_suggestions(&path);
                         }
+                        KeyCode::BackTab => {
+                            mode_state.focus = mode_state.focus.previous(&mode_state.coffee);
+                            mode_state.suggestions = mode_state.focus.load_suggestions(&path);
+                        }
                         KeyCode::Enter => {
-                            if mode_state.focus == AddFocus::Decaf {
+                            if mode_state.focus == InputFocus::Decaf {
                                 mode_state
                                     .coffee
                                     .get_or_insert_with(DraftCoffee::default)
@@ -283,7 +337,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             state.ui_state.mode = Mode::Normal;
                         }
                         KeyCode::Backspace | KeyCode::Char(_) => {
-                            if mode_state.focus == AddFocus::GrindSizeAdjustment {
+                            if mode_state.focus == InputFocus::GrindSizeAdjustment {
                                 if key.code == KeyCode::Char('+') {
                                     mode_state
                                         .coffee

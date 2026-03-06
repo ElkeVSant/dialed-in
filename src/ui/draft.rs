@@ -2,7 +2,7 @@ use ratatui::crossterm::event::KeyCode;
 use uuid::Uuid;
 
 use crate::coffee::{BrewSettings, Coffee, GrindAdjustment, Rating, Score};
-use crate::ui::AddFocus;
+use crate::ui::InputFocus;
 
 #[derive(Default)]
 pub struct DraftCoffee {
@@ -50,27 +50,27 @@ impl DraftCoffee {
     }
 }
 
-pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, keycode: KeyCode) {
+pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &InputFocus, keycode: KeyCode) {
     let coffee = coffee.get_or_insert_with(DraftCoffee::default);
     match keycode {
         KeyCode::Char(c) => match focus {
-            AddFocus::Name => coffee.name.get_or_insert_with(String::new).push(c),
-            AddFocus::Origin => coffee.origin.get_or_insert_with(String::new).push(c),
-            AddFocus::Varieties => coffee.varieties.get_or_insert_with(String::new).push(c),
-            AddFocus::Process => coffee.process.get_or_insert_with(String::new).push(c),
-            AddFocus::Roaster => coffee.roaster.get_or_insert_with(String::new).push(c),
+            InputFocus::Name => coffee.name.get_or_insert_with(String::new).push(c),
+            InputFocus::Origin => coffee.origin.get_or_insert_with(String::new).push(c),
+            InputFocus::Varieties => coffee.varieties.get_or_insert_with(String::new).push(c),
+            InputFocus::Process => coffee.process.get_or_insert_with(String::new).push(c),
+            InputFocus::Roaster => coffee.roaster.get_or_insert_with(String::new).push(c),
             // 5 (decaf) is handled in the event loop (Enter branch)
-            AddFocus::DecaffeinationProcess => coffee
+            InputFocus::DecaffeinationProcess => coffee
                 .decaffeination_process
                 .get_or_insert_with(String::new)
                 .push(c),
-            AddFocus::GrindSize => coffee
+            InputFocus::GrindSize => coffee
                 .brew_settings
                 .get_or_insert_with(DraftBrewSettings::default)
                 .grind_size
                 .get_or_insert_with(String::new)
                 .push(c),
-            AddFocus::AromaStrength => {
+            InputFocus::AromaStrength => {
                 let aroma = coffee
                     .rating
                     .get_or_insert_with(Rating::default)
@@ -78,7 +78,7 @@ pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, k
                     .get_or_insert_with(Score::default);
                 set_score(&mut aroma.strength, c);
             }
-            AddFocus::AromaPersonal => {
+            InputFocus::AromaPersonal => {
                 let aroma = coffee
                     .rating
                     .get_or_insert_with(Rating::default)
@@ -86,7 +86,7 @@ pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, k
                     .get_or_insert_with(Score::default);
                 set_score(&mut aroma.personal, c);
             }
-            AddFocus::SweetnessStrength => {
+            InputFocus::SweetnessStrength => {
                 let sweetness = coffee
                     .rating
                     .get_or_insert_with(Rating::default)
@@ -94,7 +94,7 @@ pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, k
                     .get_or_insert_with(Score::default);
                 set_score(&mut sweetness.strength, c);
             }
-            AddFocus::SweetnessPersonal => {
+            InputFocus::SweetnessPersonal => {
                 let sweetness = coffee
                     .rating
                     .get_or_insert_with(Rating::default)
@@ -102,7 +102,7 @@ pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, k
                     .get_or_insert_with(Score::default);
                 set_score(&mut sweetness.personal, c);
             }
-            AddFocus::AcidityStrength => {
+            InputFocus::AcidityStrength => {
                 let acidity = coffee
                     .rating
                     .get_or_insert_with(Rating::default)
@@ -110,7 +110,7 @@ pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, k
                     .get_or_insert_with(Score::default);
                 set_score(&mut acidity.strength, c);
             }
-            AddFocus::AcidityPersonal => {
+            InputFocus::AcidityPersonal => {
                 let acidity = coffee
                     .rating
                     .get_or_insert_with(Rating::default)
@@ -118,7 +118,7 @@ pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, k
                     .get_or_insert_with(Score::default);
                 set_score(&mut acidity.personal, c);
             }
-            AddFocus::BodyStrength => {
+            InputFocus::BodyStrength => {
                 let body = coffee
                     .rating
                     .get_or_insert_with(Rating::default)
@@ -126,7 +126,7 @@ pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, k
                     .get_or_insert_with(Score::default);
                 set_score(&mut body.strength, c);
             }
-            AddFocus::BodyPersonal => {
+            InputFocus::BodyPersonal => {
                 let body = coffee
                     .rating
                     .get_or_insert_with(Rating::default)
@@ -134,7 +134,7 @@ pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, k
                     .get_or_insert_with(Score::default);
                 set_score(&mut body.personal, c);
             }
-            AddFocus::AftertasteStrength => {
+            InputFocus::AftertasteStrength => {
                 let aftertaste = coffee
                     .rating
                     .get_or_insert_with(Rating::default)
@@ -142,7 +142,7 @@ pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, k
                     .get_or_insert_with(Score::default);
                 set_score(&mut aftertaste.strength, c);
             }
-            AddFocus::AftertastePersonal => {
+            InputFocus::AftertastePersonal => {
                 let aftertaste = coffee
                     .rating
                     .get_or_insert_with(Rating::default)
@@ -153,16 +153,16 @@ pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, k
             _ => (),
         },
         KeyCode::Backspace => match focus {
-            AddFocus::Name => pop_optional_char(&mut coffee.name),
-            AddFocus::Origin => pop_optional_char(&mut coffee.origin),
-            AddFocus::Varieties => pop_optional_char(&mut coffee.varieties),
-            AddFocus::Process => pop_optional_char(&mut coffee.process),
-            AddFocus::Roaster => pop_optional_char(&mut coffee.roaster),
+            InputFocus::Name => pop_optional_char(&mut coffee.name),
+            InputFocus::Origin => pop_optional_char(&mut coffee.origin),
+            InputFocus::Varieties => pop_optional_char(&mut coffee.varieties),
+            InputFocus::Process => pop_optional_char(&mut coffee.process),
+            InputFocus::Roaster => pop_optional_char(&mut coffee.roaster),
             // 5 (decaf) is handled in the event loop (Enter branch)
-            AddFocus::DecaffeinationProcess => {
+            InputFocus::DecaffeinationProcess => {
                 pop_optional_char(&mut coffee.decaffeination_process)
             }
-            AddFocus::GrindSize => {
+            InputFocus::GrindSize => {
                 let dbs = coffee
                     .brew_settings
                     .get_or_insert_with(DraftBrewSettings::default);
@@ -171,53 +171,53 @@ pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &AddFocus, k
                     coffee.brew_settings = None;
                 }
             }
-            AddFocus::AromaStrength => {
+            InputFocus::AromaStrength => {
                 if let Some(aroma) = coffee.rating.as_mut().and_then(|r| r.aroma.as_mut()) {
                     aroma.strength = None;
                 }
             }
-            AddFocus::AromaPersonal => {
+            InputFocus::AromaPersonal => {
                 if let Some(aroma) = coffee.rating.as_mut().and_then(|r| r.aroma.as_mut()) {
                     aroma.personal = None;
                 }
             }
-            AddFocus::SweetnessStrength => {
+            InputFocus::SweetnessStrength => {
                 if let Some(sweetness) = coffee.rating.as_mut().and_then(|r| r.sweetness.as_mut()) {
                     sweetness.strength = None;
                 }
             }
-            AddFocus::SweetnessPersonal => {
+            InputFocus::SweetnessPersonal => {
                 if let Some(sweetness) = coffee.rating.as_mut().and_then(|r| r.sweetness.as_mut()) {
                     sweetness.personal = None;
                 }
             }
-            AddFocus::AcidityStrength => {
+            InputFocus::AcidityStrength => {
                 if let Some(acidity) = coffee.rating.as_mut().and_then(|r| r.acidity.as_mut()) {
                     acidity.strength = None;
                 }
             }
-            AddFocus::AcidityPersonal => {
+            InputFocus::AcidityPersonal => {
                 if let Some(acidity) = coffee.rating.as_mut().and_then(|r| r.acidity.as_mut()) {
                     acidity.personal = None;
                 }
             }
-            AddFocus::BodyStrength => {
+            InputFocus::BodyStrength => {
                 if let Some(body) = coffee.rating.as_mut().and_then(|r| r.body.as_mut()) {
                     body.strength = None;
                 }
             }
-            AddFocus::BodyPersonal => {
+            InputFocus::BodyPersonal => {
                 if let Some(body) = coffee.rating.as_mut().and_then(|r| r.body.as_mut()) {
                     body.personal = None;
                 }
             }
-            AddFocus::AftertasteStrength => {
+            InputFocus::AftertasteStrength => {
                 if let Some(aftertaste) = coffee.rating.as_mut().and_then(|r| r.aftertaste.as_mut())
                 {
                     aftertaste.strength = None;
                 }
             }
-            AddFocus::AftertastePersonal => {
+            InputFocus::AftertastePersonal => {
                 if let Some(aftertaste) = coffee.rating.as_mut().and_then(|r| r.aftertaste.as_mut())
                 {
                     aftertaste.personal = None;

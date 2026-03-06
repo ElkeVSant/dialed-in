@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::coffee::Coffee;
 use crate::ui::fields::{DraftField, build_coffee_fields, build_rating_fields};
-use crate::ui::{AddFocus, DraftCoffee};
+use crate::ui::{DraftCoffee, InputFocus};
 
 const DIALED_IN: &str = r#"
 8888888b. d8b        888             8888888888         
@@ -34,7 +34,7 @@ pub fn render_coffees(state: &mut ListState, coffees: &[Coffee], frame: &mut Fra
 }
 
 pub fn render_input_coffee_modal(
-    focus: &AddFocus,
+    focus: &InputFocus,
     suggestions: &Option<Vec<String>>,
     coffee: &Option<DraftCoffee>,
     error: &Option<String>,

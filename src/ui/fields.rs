@@ -1,12 +1,12 @@
 use crate::coffee::Rating;
-use crate::ui::{AddFocus, DraftCoffee};
+use crate::ui::{DraftCoffee, InputFocus};
 
 type DraftFieldAccessor = Box<dyn Fn(&DraftCoffee) -> String>;
 type InputExtractor = Option<Box<dyn Fn(&str) -> String>>;
 
 pub enum DraftField {
     Header(&'static str),
-    Field(&'static str, AddFocus, DraftFieldAccessor, InputExtractor),
+    Field(&'static str, InputFocus, DraftFieldAccessor, InputExtractor),
     Spacing,
     Summary(&'static str, DraftFieldAccessor),
 }
@@ -15,37 +15,37 @@ pub fn build_coffee_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     let mut fields: Vec<DraftField> = vec![
         DraftField::Field(
             "Name",
-            AddFocus::Name,
+            InputFocus::Name,
             Box::new(|c| c.name.clone().unwrap_or_default()),
             None,
         ),
         DraftField::Field(
             "Origin",
-            AddFocus::Origin,
+            InputFocus::Origin,
             Box::new(|c| c.origin.clone().unwrap_or_default()),
             None,
         ),
         DraftField::Field(
             "Varieties",
-            AddFocus::Varieties,
+            InputFocus::Varieties,
             Box::new(|c| c.varieties.clone().unwrap_or_default()),
             Some(Box::new(|v| v.split(", ").last().unwrap_or("").to_string())),
         ),
         DraftField::Field(
             "Process",
-            AddFocus::Process,
+            InputFocus::Process,
             Box::new(|c| c.process.clone().unwrap_or_default()),
             None,
         ),
         DraftField::Field(
             "Roaster",
-            AddFocus::Roaster,
+            InputFocus::Roaster,
             Box::new(|c| c.roaster.clone().unwrap_or_default()),
             None,
         ),
         DraftField::Field(
             "Decaf",
-            AddFocus::Decaf,
+            InputFocus::Decaf,
             Box::new(|c| {
                 if c.decaf.unwrap_or(false) {
                     "☑".to_string()
@@ -61,7 +61,7 @@ pub fn build_coffee_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     {
         fields.push(DraftField::Field(
             "Decaffeination Process",
-            AddFocus::DecaffeinationProcess,
+            InputFocus::DecaffeinationProcess,
             Box::new(|c: &DraftCoffee| c.decaffeination_process.clone().unwrap_or_default()),
             None,
         ));
@@ -70,7 +70,7 @@ pub fn build_coffee_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     }
     fields.push(DraftField::Field(
         "Grind size",
-        AddFocus::GrindSize,
+        InputFocus::GrindSize,
         Box::new(|c| {
             c.brew_settings
                 .as_ref()
@@ -84,7 +84,7 @@ pub fn build_coffee_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     {
         fields.push(DraftField::Field(
             "Adjustment",
-            AddFocus::GrindSizeAdjustment,
+            InputFocus::GrindSizeAdjustment,
             Box::new(|c| {
                 c.brew_settings
                     .as_ref()
@@ -105,7 +105,7 @@ pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
         DraftField::Header("Aroma"),
         DraftField::Field(
             " Strength",
-            AddFocus::AromaStrength,
+            InputFocus::AromaStrength,
             Box::new(|c| {
                 format_score(
                     c.rating
@@ -119,7 +119,7 @@ pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
         ),
         DraftField::Field(
             " Personal",
-            AddFocus::AromaPersonal,
+            InputFocus::AromaPersonal,
             Box::new(|c| {
                 format_score(
                     c.rating
@@ -134,7 +134,7 @@ pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
         DraftField::Header("Sweetness"),
         DraftField::Field(
             " Strength",
-            AddFocus::SweetnessStrength,
+            InputFocus::SweetnessStrength,
             Box::new(|c| {
                 format_score(
                     c.rating
@@ -148,7 +148,7 @@ pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
         ),
         DraftField::Field(
             " Personal",
-            AddFocus::SweetnessPersonal,
+            InputFocus::SweetnessPersonal,
             Box::new(|c| {
                 format_score(
                     c.rating
@@ -163,7 +163,7 @@ pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
         DraftField::Header("Acidity"),
         DraftField::Field(
             " Strength",
-            AddFocus::AcidityStrength,
+            InputFocus::AcidityStrength,
             Box::new(|c| {
                 format_score(
                     c.rating
@@ -177,7 +177,7 @@ pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
         ),
         DraftField::Field(
             " Personal",
-            AddFocus::AcidityPersonal,
+            InputFocus::AcidityPersonal,
             Box::new(|c| {
                 format_score(
                     c.rating
@@ -192,7 +192,7 @@ pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
         DraftField::Header("Body"),
         DraftField::Field(
             " Strength",
-            AddFocus::BodyStrength,
+            InputFocus::BodyStrength,
             Box::new(|c| {
                 format_score(
                     c.rating
@@ -206,7 +206,7 @@ pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
         ),
         DraftField::Field(
             " Personal",
-            AddFocus::BodyPersonal,
+            InputFocus::BodyPersonal,
             Box::new(|c| {
                 format_score(
                     c.rating
@@ -221,7 +221,7 @@ pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
         DraftField::Header("Aftertaste"),
         DraftField::Field(
             " Strength",
-            AddFocus::AftertasteStrength,
+            InputFocus::AftertasteStrength,
             Box::new(|c| {
                 format_score(
                     c.rating
@@ -235,7 +235,7 @@ pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
         ),
         DraftField::Field(
             " Personal",
-            AddFocus::AftertastePersonal,
+            InputFocus::AftertastePersonal,
             Box::new(|c| {
                 format_score(
                     c.rating
