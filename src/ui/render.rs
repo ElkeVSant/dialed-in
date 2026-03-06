@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 use crate::coffee::Coffee;
-use crate::ui::fields::{DraftField, build_experience_fields, build_fact_fields};
+use crate::ui::fields::{DraftField, build_coffee_fields, build_rating_fields};
 use crate::ui::{AddFocus, DraftCoffee};
 
 const DIALED_IN: &str = r#"
@@ -48,40 +48,40 @@ pub fn render_input_coffee_modal(
     frame.render_widget(Clear, modal_area);
     frame.render_widget(modal, modal_area);
 
-    let fact_fields = build_fact_fields(coffee);
-    let experience_fields = build_experience_fields(coffee);
+    let coffee_fields = build_coffee_fields(coffee);
+    let rating_fields = build_rating_fields(coffee);
 
     let inner_modal_areas = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(
-            fact_fields.len().max(experience_fields.len()) as u16,
+            coffee_fields.len().max(rating_fields.len()) as u16,
         )])
         .split(inner_modal_area);
     let field_areas = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)])
         .split(inner_modal_areas[0]);
-    let fact_areas = Layout::default()
+    let coffee_areas = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
             Constraint::Length(1);
-            fact_fields.len().max(experience_fields.len())
+            coffee_fields.len().max(rating_fields.len())
         ])
         .split(field_areas[0]);
-    let experience_areas = Layout::default()
+    let rating_areas = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
             Constraint::Length(1);
-            fact_fields.len().max(experience_fields.len())
+            coffee_fields.len().max(rating_fields.len())
         ])
         .split(field_areas[1]);
 
-    fact_fields
+    coffee_fields
         .iter()
-        .zip(fact_areas.iter())
+        .zip(coffee_areas.iter())
         .for_each(|(field, area)| {
             if let DraftField::Field(label, focus_name, value_accessor, input_extractor) = field {
-                let fact_areas = Layout::default()
+                let coffee_areas = Layout::default()
                     .direction(Direction::Horizontal)
                     .constraints([
                         Constraint::Length(label.len() as u16 + 2),
@@ -91,10 +91,10 @@ pub fn render_input_coffee_modal(
                 if focus_name == focus {
                     frame.render_widget(
                         Paragraph::new(format!("{}: ", *label)).bg(Color::DarkGray),
-                        fact_areas[0],
+                        coffee_areas[0],
                     );
                 } else {
-                    frame.render_widget(Paragraph::new(format!("{}: ", *label)), fact_areas[0]);
+                    frame.render_widget(Paragraph::new(format!("{}: ", *label)), coffee_areas[0]);
                 }
                 // retrieve values from default DraftCoffee to ensure None values like the default
                 // decaf checkbox are rendered as expected
@@ -120,18 +120,18 @@ pub fn render_input_coffee_modal(
                     }
                 }
                 let line = Line::from(vec![Span::raw(value).fg(Color::White), suggestion_span]);
-                frame.render_widget(line, fact_areas[1]);
+                frame.render_widget(line, coffee_areas[1]);
             }
         });
-    experience_fields
+    rating_fields
         .iter()
-        .zip(experience_areas.iter())
+        .zip(rating_areas.iter())
         .for_each(|(field, area)| match field {
             DraftField::Header(label) => {
                 frame.render_widget(Paragraph::new(format!("{}: ", *label)), *area)
             }
             DraftField::Field(label, focus_name, value_accessor, _) => {
-                let experience_areas = Layout::default()
+                let rating_areas = Layout::default()
                     .direction(Direction::Horizontal)
                     .constraints([
                         Constraint::Length(label.len() as u16 + 2),
@@ -141,13 +141,10 @@ pub fn render_input_coffee_modal(
                 if focus_name == focus {
                     frame.render_widget(
                         Paragraph::new(format!("{}: ", *label)).bg(Color::DarkGray),
-                        experience_areas[0],
+                        rating_areas[0],
                     );
                 } else {
-                    frame.render_widget(
-                        Paragraph::new(format!("{}: ", *label)),
-                        experience_areas[0],
-                    );
+                    frame.render_widget(Paragraph::new(format!("{}: ", *label)), rating_areas[0]);
                 }
                 // retrieve values from default DraftCoffee to ensure placeholders like the rating
                 // circles are rendered as expected
@@ -155,9 +152,24 @@ pub fn render_input_coffee_modal(
                     .as_ref()
                     .map(value_accessor)
                     .unwrap_or_else(|| value_accessor(&DraftCoffee::default()));
-                frame.render_widget(Paragraph::new(value), experience_areas[1]);
+                frame.render_widget(Paragraph::new(value), rating_areas[1]);
             }
             DraftField::Spacing => frame.render_widget(Paragraph::new("".to_string()), *area),
+            DraftField::Summary(label, value_accessor) => {
+                let summary_areas = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints([
+                        Constraint::Length(label.len() as u16 + 2),
+                        Constraint::Min(0),
+                    ])
+                    .split(*area);
+                frame.render_widget(Paragraph::new(format!("{}: ", *label)), summary_areas[0]);
+                let value = coffee
+                    .as_ref()
+                    .map(value_accessor)
+                    .unwrap_or_else(|| value_accessor(&DraftCoffee::default()));
+                frame.render_widget(Paragraph::new(value), summary_areas[1]);
+            }
         });
     if let Some(message) = error {
         render_error(message, frame, inner_modal_area);

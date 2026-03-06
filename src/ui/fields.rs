@@ -1,3 +1,4 @@
+use crate::coffee::Rating;
 use crate::ui::{AddFocus, DraftCoffee};
 
 type DraftFieldAccessor = Box<dyn Fn(&DraftCoffee) -> String>;
@@ -7,9 +8,10 @@ pub enum DraftField {
     Header(&'static str),
     Field(&'static str, AddFocus, DraftFieldAccessor, InputExtractor),
     Spacing,
+    Summary(&'static str, DraftFieldAccessor),
 }
 
-pub fn build_fact_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
+pub fn build_coffee_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     let mut fields: Vec<DraftField> = vec![
         DraftField::Field(
             "Name",
@@ -63,12 +65,10 @@ pub fn build_fact_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
             Box::new(|c: &DraftCoffee| c.decaffeination_process.clone().unwrap_or_default()),
             None,
         ));
+    } else {
+        fields.push(DraftField::Spacing)
     }
-    fields
-}
-
-pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
-    let mut fields: Vec<DraftField> = vec![DraftField::Field(
+    fields.push(DraftField::Field(
         "Grind size",
         AddFocus::GrindSize,
         Box::new(|c| {
@@ -78,7 +78,7 @@ pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
                 .unwrap_or_default()
         }),
         None,
-    )];
+    ));
     if let Some(draft) = draft
         && draft.brew_settings.is_some()
     {
@@ -97,7 +97,11 @@ pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     } else {
         fields.push(DraftField::Spacing)
     }
-    let mut rating_fields = vec![
+    fields
+}
+
+pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
+    let mut fields = vec![
         DraftField::Header("Aroma"),
         DraftField::Field(
             " Strength",
@@ -244,7 +248,20 @@ pub fn build_experience_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
             None,
         ),
     ];
-    fields.append(&mut rating_fields);
+    if let Some(draft) = draft
+        && let Some(r) = draft.rating
+        && calculate_score(&r).is_some()
+    {
+        fields.append(&mut vec![
+            DraftField::Spacing,
+            DraftField::Summary(
+                "Rating",
+                Box::new(|c| calculate_score(&c.rating.unwrap()).unwrap().to_string()),
+            ),
+        ])
+    } else {
+        fields.append(&mut vec![DraftField::Spacing, DraftField::Spacing])
+    }
     fields
 }
 
@@ -254,4 +271,19 @@ fn format_score(score: u8) -> String {
         "● ".repeat(score as usize),
         "○ ".repeat((5 - score) as usize)
     )
+}
+
+fn calculate_score(rating: &Rating) -> Option<u8> {
+    let scores = [
+        rating.aroma.as_ref().and_then(|a| a.personal),
+        rating.sweetness.as_ref().and_then(|s| s.personal),
+        rating.acidity.as_ref().and_then(|a| a.personal),
+        rating.body.as_ref().and_then(|b| b.personal),
+        rating.aftertaste.as_ref().and_then(|a| a.personal),
+    ];
+    if scores.iter().all(|s| s.is_none()) {
+        None
+    } else {
+        Some(scores.iter().filter_map(|s| *s).sum())
+    }
 }
