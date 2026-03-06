@@ -21,7 +21,7 @@ pub struct Coffee {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BrewSettings {
     pub grind_size: f32,
     pub grind_size_adjustment: Option<GrindAdjustment>,
@@ -65,7 +65,7 @@ impl GrindAdjustment {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct Rating {
     pub aroma: Option<Score>,
     pub sweetness: Option<Score>,

@@ -13,13 +13,15 @@ use ratatui::{
 
 use crate::app::{
     add_coffee, delete_coffee, list_coffees, list_decaffeination_processes, list_origins,
-    list_processes, list_roasters, list_varieties,
+    list_processes, list_roasters, list_varieties, update_coffee,
 };
 use crate::coffee::Coffee;
-use crate::ui::draft::{DraftCoffee, convert_draft_to_coffee, update_draft_coffee};
+use crate::ui::draft::{
+    DraftCoffee, convert_coffee_to_draft, convert_draft_to_coffee, update_draft_coffee,
+};
 use crate::ui::render::{
-    render_add_coffee_modal, render_app_name, render_coffees, render_delete_coffee_modal,
-    render_error,
+    render_app_name, render_coffees, render_delete_coffee_modal, render_error,
+    render_input_coffee_modal,
 };
 
 #[derive(Default)]
@@ -31,7 +33,7 @@ struct State {
 #[derive(Default)]
 struct UiState {
     mode: Mode,
-    add_state: Option<AddState>,
+    input_state: Option<InputModalState>,
     list_state: ListState,
     error: Option<String>,
 }
@@ -41,11 +43,12 @@ enum Mode {
     #[default]
     Normal,
     Add,
+    Update,
     Delete,
 }
 
 #[derive(Default)]
-struct AddState {
+struct InputModalState {
     focus: AddFocus,
     coffee: Option<DraftCoffee>,
     suggestions: Option<Vec<String>>,
@@ -162,16 +165,22 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 if let Some(message) = &state.ui_state.error {
                     render_error(message, frame, areas[1]);
                 }
-            } else if state.ui_state.mode == Mode::Add {
-                let add_state = state
+            } else if state.ui_state.mode == Mode::Add || state.ui_state.mode == Mode::Update {
+                let title = if state.ui_state.mode == Mode::Add {
+                    "New coffee"
+                } else {
+                    "Update coffee"
+                };
+                let mode_state = state
                     .ui_state
-                    .add_state
-                    .get_or_insert_with(AddState::default);
-                render_add_coffee_modal(
-                    &add_state.focus,
-                    &add_state.suggestions,
-                    &add_state.coffee,
+                    .input_state
+                    .get_or_insert_with(InputModalState::default);
+                render_input_coffee_modal(
+                    &mode_state.focus,
+                    &mode_state.suggestions,
+                    &mode_state.coffee,
                     &state.ui_state.error,
+                    title,
                     frame,
                     areas[1],
                 );
@@ -201,8 +210,26 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                     }
                     KeyCode::Char('a') => {
                         state.ui_state.mode = Mode::Add;
-                        state.ui_state.add_state = Some(AddState::default());
+                        state.ui_state.input_state = Some(InputModalState::default());
                         state.ui_state.error = None;
+                    }
+                    KeyCode::Char('e') | KeyCode::Char('u') => {
+                        if state.ui_state.list_state.selected().is_none() {
+                            state.ui_state.error = Some("Select a coffee to update it".to_string());
+                        } else {
+                            state.ui_state.input_state = Some(InputModalState {
+                                coffee: Some(convert_coffee_to_draft(
+                                    &state.coffees[state
+                                        .ui_state
+                                        .list_state
+                                        .selected()
+                                        .expect("dropped all beans")],
+                                )),
+                                ..InputModalState::default()
+                            });
+                            state.ui_state.error = None;
+                            state.ui_state.mode = Mode::Update;
+                        }
                     }
                     KeyCode::Char('d') => {
                         if state.ui_state.list_state.selected().is_none() {
@@ -213,31 +240,37 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                     }
                     _ => (),
                 },
-                Mode::Add => {
-                    let add_state = state
+                Mode::Add | Mode::Update => {
+                    let mode_state = state
                         .ui_state
-                        .add_state
+                        .input_state
                         .as_mut()
-                        .expect("add state missing in Add mode");
+                        .expect("mode state missing in mode");
                     match key.code {
                         KeyCode::Tab => {
-                            add_state.focus = add_state.focus.next(&add_state.coffee);
-                            add_state.suggestions = add_state.focus.load_suggestions(&path);
+                            mode_state.focus = mode_state.focus.next(&mode_state.coffee);
+                            mode_state.suggestions = mode_state.focus.load_suggestions(&path);
                         }
                         KeyCode::Enter => {
-                            if add_state.focus == AddFocus::Decaf {
-                                add_state
+                            if mode_state.focus == AddFocus::Decaf {
+                                mode_state
                                     .coffee
                                     .get_or_insert_with(DraftCoffee::default)
                                     .toggle_decaf();
-                            } else if let Some(draft) = &add_state.coffee {
+                            } else if let Some(draft) = &mode_state.coffee {
                                 match convert_draft_to_coffee(draft) {
                                     Ok(coffee) => {
-                                        add_coffee(coffee, &path).expect("cannot remember coffee");
+                                        if state.ui_state.mode == Mode::Add {
+                                            add_coffee(coffee, &path)
+                                                .expect("cannot remember coffee");
+                                            state.ui_state.list_state = ListState::default();
+                                        } else {
+                                            update_coffee(coffee, &path)
+                                                .expect("cannot improve coffee");
+                                        }
+                                        state.ui_state.input_state = None;
                                         state.coffees =
                                             list_coffees(&path).expect("could not list coffees");
-                                        state.ui_state.add_state = None;
-                                        state.ui_state.list_state = ListState::default();
                                         state.ui_state.mode = Mode::Normal;
                                     }
                                     Err(e) => state.ui_state.error = Some(e.to_string()),
@@ -245,26 +278,26 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             }
                         }
                         KeyCode::Esc => {
-                            state.ui_state.add_state = None;
+                            state.ui_state.input_state = None;
                             state.ui_state.error = None;
                             state.ui_state.mode = Mode::Normal;
                         }
                         KeyCode::Backspace | KeyCode::Char(_) => {
-                            if add_state.focus == AddFocus::GrindSizeAdjustment {
+                            if mode_state.focus == AddFocus::GrindSizeAdjustment {
                                 if key.code == KeyCode::Char('+') {
-                                    add_state
+                                    mode_state
                                         .coffee
                                         .as_mut()
                                         .expect("no coffee to adjust")
                                         .grind_coarser();
                                 } else if key.code == KeyCode::Char('-') {
-                                    add_state
+                                    mode_state
                                         .coffee
                                         .as_mut()
                                         .expect("no coffee to adjust")
                                         .grind_finer();
                                 } else if key.code == KeyCode::Backspace {
-                                    add_state
+                                    mode_state
                                         .coffee
                                         .as_mut()
                                         .expect("no coffee to adjust")
@@ -272,8 +305,8 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                                 }
                             } else {
                                 update_draft_coffee(
-                                    &mut add_state.coffee,
-                                    &add_state.focus,
+                                    &mut mode_state.coffee,
+                                    &mode_state.focus,
                                     key.code,
                                 );
                                 if matches!(key.code, KeyCode::Char(_)) {

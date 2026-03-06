@@ -1,10 +1,12 @@
 use ratatui::crossterm::event::KeyCode;
+use uuid::Uuid;
 
 use crate::coffee::{BrewSettings, Coffee, GrindAdjustment, Rating, Score};
 use crate::ui::AddFocus;
 
 #[derive(Default)]
 pub struct DraftCoffee {
+    pub id: Option<Uuid>,
     pub name: Option<String>,
     pub origin: Option<String>,
     pub varieties: Option<String>,
@@ -245,6 +247,7 @@ fn set_score(score: &mut Option<u8>, value: char) {
 
 pub fn convert_draft_to_coffee(draft: &DraftCoffee) -> Result<Coffee, Box<dyn std::error::Error>> {
     Ok(Coffee {
+        id: draft.id.unwrap_or_default(),
         name: draft.name.clone().ok_or("name is required")?,
         origin: draft.origin.clone(),
         varieties: draft
@@ -279,4 +282,22 @@ pub fn convert_draft_to_coffee(draft: &DraftCoffee) -> Result<Coffee, Box<dyn st
         }),
         ..Default::default()
     })
+}
+
+pub fn convert_coffee_to_draft(coffee: &Coffee) -> DraftCoffee {
+    DraftCoffee {
+        id: Some(coffee.id),
+        name: Some(coffee.name.clone()),
+        origin: coffee.origin.clone(),
+        varieties: Some(coffee.varieties.clone().unwrap_or_default().join(", ")),
+        process: coffee.process.clone(),
+        roaster: coffee.roaster.clone(),
+        decaf: coffee.decaf,
+        decaffeination_process: coffee.decaffeination_process.clone(),
+        brew_settings: coffee.brew_settings.map(|bs| DraftBrewSettings {
+            grind_size: Some(bs.grind_size.to_string()),
+            grind_size_adjustment: bs.grind_size_adjustment,
+        }),
+        rating: coffee.rating,
+    }
 }

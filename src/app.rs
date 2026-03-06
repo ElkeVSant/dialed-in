@@ -19,7 +19,7 @@ pub fn add_coffee(mut coffee: Coffee, path: &Path) -> Result<Uuid, Box<dyn std::
     Ok(id)
 }
 
-fn update_coffee(mut coffee: Coffee, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+pub fn update_coffee(mut coffee: Coffee, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     coffee.updated_at = Utc::now();
     let mut coffees = load(path)?;
     for cup in coffees.iter_mut() {

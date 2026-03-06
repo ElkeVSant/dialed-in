@@ -33,16 +33,17 @@ pub fn render_coffees(state: &mut ListState, coffees: &[Coffee], frame: &mut Fra
     frame.render_stateful_widget(coffee_list, area, state);
 }
 
-pub fn render_add_coffee_modal(
+pub fn render_input_coffee_modal(
     focus: &AddFocus,
     suggestions: &Option<Vec<String>>,
     coffee: &Option<DraftCoffee>,
     error: &Option<String>,
+    title: &str,
     frame: &mut Frame,
     area: Rect,
 ) {
     let modal_area = area.inner(Margin::new(2, 1));
-    let modal = Block::bordered().title("New coffee");
+    let modal = Block::bordered().title(title);
     let inner_modal_area = modal.inner(modal_area);
     frame.render_widget(Clear, modal_area);
     frame.render_widget(modal, modal_area);
