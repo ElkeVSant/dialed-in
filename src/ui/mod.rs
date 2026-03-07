@@ -262,7 +262,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 Mode::Normal => match key.code {
                     KeyCode::Char('q') => break Ok(()),
                     KeyCode::Esc => break Ok(()),
-                    KeyCode::Tab => {
+                    KeyCode::Tab | KeyCode::Down => {
                         state.ui_state.error = None;
                         if let Some(index) = state.ui_state.list_state.selected()
                             && index == state.coffees.len() - 1
@@ -272,7 +272,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             state.ui_state.list_state.select_next();
                         }
                     }
-                    KeyCode::BackTab => {
+                    KeyCode::BackTab | KeyCode::Up => {
                         state.ui_state.error = None;
                         if let Some(index) = state.ui_state.list_state.selected()
                             && index == 0
@@ -323,7 +323,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                         state.ui_state.query = None;
                         state.ui_state.mode = Mode::Normal;
                     }
-                    KeyCode::Tab => {
+                    KeyCode::Tab | KeyCode::Down => {
                         if let Some(index) = state.ui_state.list_state.selected() {
                             let list =
                                 filter_coffees(&state.coffees, state.ui_state.query.as_deref());
@@ -336,7 +336,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             state.ui_state.list_state.select_first();
                         }
                     }
-                    KeyCode::BackTab => {
+                    KeyCode::BackTab | KeyCode::Up => {
                         state.ui_state.error = None;
                         if let Some(index) = state.ui_state.list_state.selected() {
                             if index == 0 {
@@ -394,14 +394,16 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                         .as_mut()
                         .expect("mode state missing in mode");
                     match key.code {
-                        KeyCode::Tab => {
+                        KeyCode::Tab | KeyCode::Down => {
                             mode_state.focus = mode_state.focus.next(&mode_state.coffee);
                             mode_state.suggestions = mode_state.focus.load_suggestions(&path);
                         }
-                        KeyCode::BackTab => {
+                        KeyCode::BackTab | KeyCode::Up => {
                             mode_state.focus = mode_state.focus.previous(&mode_state.coffee);
                             mode_state.suggestions = mode_state.focus.load_suggestions(&path);
                         }
+                        KeyCode::Left => mode_state.focus = InputFocus::Name,
+                        KeyCode::Right => mode_state.focus = InputFocus::AromaStrength,
                         KeyCode::Enter => {
                             let focus = mode_state.focus.clone();
 
