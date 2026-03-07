@@ -305,3 +305,21 @@ pub fn convert_coffee_to_draft(coffee: &Coffee) -> DraftCoffee {
         rating: coffee.rating,
     }
 }
+
+// supports only the characteristics with suggestions
+pub fn get_match_input(focus: &InputFocus, coffee: &DraftCoffee) -> Option<String> {
+    match focus {
+        InputFocus::Origin => coffee.origin.clone(),
+        InputFocus::Varieties => {
+            if let Some(v) = &coffee.varieties {
+                v.split(", ").last().map(|s| s.to_string())
+            } else {
+                None
+            }
+        }
+        InputFocus::Process => coffee.process.clone(),
+        InputFocus::Roaster => coffee.roaster.clone(),
+        InputFocus::DecaffeinationProcess => coffee.decaffeination_process.clone(),
+        _ => None,
+    }
+}

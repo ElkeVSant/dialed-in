@@ -35,7 +35,7 @@ pub fn render_coffees(state: &mut ListState, coffees: &[&Coffee], frame: &mut Fr
 
 pub fn render_input_coffee_modal(
     focus: &InputFocus,
-    suggestions: &Option<Vec<String>>,
+    suggestion: &Option<String>,
     coffee: &Option<DraftCoffee>,
     error: &Option<String>,
     title: &str,
@@ -103,21 +103,15 @@ pub fn render_input_coffee_modal(
                     .map(value_accessor)
                     .unwrap_or_else(|| value_accessor(&DraftCoffee::default()));
                 let mut suggestion_span = Span::raw("");
-                if let Some(suggestions) = suggestions
-                    && !value.is_empty()
+                if let Some(s) = suggestion
+                    && focus_name == focus
                 {
                     let match_input = match input_extractor {
                         Some(ie) => ie(&value),
                         None => value.clone(),
                     };
-                    let suggestions: Vec<&String> = suggestions
-                        .iter()
-                        .filter(|s| s.starts_with(match_input.as_str()))
-                        .collect();
-                    if !suggestions.is_empty() {
-                        let suggestion = &suggestions[0][match_input.len()..];
-                        suggestion_span = Span::raw(suggestion).fg(Color::DarkGray);
-                    }
+                    let display_suggestion = &s[match_input.len()..];
+                    suggestion_span = Span::raw(display_suggestion).fg(Color::DarkGray);
                 }
                 let display_value = if focus_name == focus && focus != &InputFocus::Decaf {
                     value + "|"

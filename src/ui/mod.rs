@@ -17,8 +17,8 @@ use crate::app::{
 };
 use crate::coffee::Coffee;
 use crate::ui::draft::{
-    DraftCoffee, convert_coffee_to_draft, convert_draft_to_coffee, pop_optional_char,
-    update_draft_coffee,
+    DraftCoffee, convert_coffee_to_draft, convert_draft_to_coffee, get_match_input,
+    pop_optional_char, update_draft_coffee,
 };
 use crate::ui::render::{
     render_app_name, render_coffees, render_delete_coffee_modal, render_error,
@@ -223,9 +223,22 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                     .ui_state
                     .input_state
                     .get_or_insert_with(InputModalState::default);
+
+                let mut suggestion: Option<String> = None;
+                if let Some(suggestions) = mode_state.suggestions.as_ref()
+                    && let Some(coffee) = &mode_state.coffee
+                {
+                    let potential_match = get_match_input(&mode_state.focus, coffee);
+                    if let Some(pm) = potential_match {
+                        suggestion = suggestions
+                            .iter()
+                            .find(|s| s.starts_with(&pm))
+                            .map(|s| s.to_string());
+                    }
+                }
                 render_input_coffee_modal(
                     &mode_state.focus,
-                    &mode_state.suggestions,
+                    &suggestion,
                     &mode_state.coffee,
                     &state.ui_state.error,
                     title,
