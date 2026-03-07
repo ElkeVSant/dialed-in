@@ -3,7 +3,7 @@ use ratatui::{
     layout::{Constraint, Direction, HorizontalAlignment, Layout, Margin, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, Clear, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Clear, List, ListState, Paragraph},
 };
 
 use crate::coffee::Coffee;
@@ -25,23 +25,28 @@ pub fn render_app_name(frame: &mut Frame, area: Rect) {
 }
 
 pub fn render_coffees(state: &mut ListState, coffees: &[&Coffee], frame: &mut Frame, area: Rect) {
-    let coffee_names: Vec<ListItem> = coffees
-        .iter()
-        .map(|c| {
-            let score_span = {
-                if let Some(rating) = c.rating
-                    && let Some(score) = calculate_score(&rating)
-                {
-                    Span::raw(format! {"    ☕ {}", score})
-                } else {
-                    Span::raw("")
-                }
-            };
-            ListItem::new(Line::from(vec![Span::raw(c.name.clone()), score_span]))
-        })
-        .collect();
-    let coffee_list = List::new(coffee_names).highlight_style(Style::new().bg(Color::DarkGray));
-    frame.render_stateful_widget(coffee_list, area, state);
+    let list_areas = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Min(0), Constraint::Length(6)])
+        .split(area);
+    let mut names = Vec::new();
+    let mut ratings = Vec::new();
+    for coffee in coffees {
+        names.push(coffee.name.clone());
+        ratings.push({
+            if let Some(rating) = coffee.rating
+                && let Some(score) = calculate_score(&rating)
+            {
+                format!("☕ {}", score)
+            } else {
+                "".to_string()
+            }
+        });
+    }
+    let coffee_list = List::new(names).highlight_style(Style::new().bg(Color::DarkGray));
+    frame.render_stateful_widget(coffee_list, list_areas[0], state);
+    let rating_list = List::new(ratings).highlight_style(Style::new().bg(Color::DarkGray));
+    frame.render_stateful_widget(rating_list, list_areas[1], state);
 }
 
 pub fn render_input_coffee_modal(
