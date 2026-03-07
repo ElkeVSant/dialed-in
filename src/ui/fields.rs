@@ -273,7 +273,7 @@ fn format_score(score: u8) -> String {
     )
 }
 
-fn calculate_score(rating: &Rating) -> Option<u8> {
+pub fn calculate_score(rating: &Rating) -> Option<u8> {
     let scores = [
         rating.aroma.as_ref().and_then(|a| a.personal),
         rating.sweetness.as_ref().and_then(|s| s.personal),

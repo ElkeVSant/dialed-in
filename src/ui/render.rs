@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 use crate::coffee::Coffee;
-use crate::ui::fields::{DraftField, build_coffee_fields, build_rating_fields};
+use crate::ui::fields::{DraftField, build_coffee_fields, build_rating_fields, calculate_score};
 use crate::ui::{DraftCoffee, InputFocus};
 
 const DIALED_IN: &str = r#"
@@ -27,7 +27,18 @@ pub fn render_app_name(frame: &mut Frame, area: Rect) {
 pub fn render_coffees(state: &mut ListState, coffees: &[&Coffee], frame: &mut Frame, area: Rect) {
     let coffee_names: Vec<ListItem> = coffees
         .iter()
-        .map(|c| ListItem::new(c.name.clone()))
+        .map(|c| {
+            let score_span = {
+                if let Some(rating) = c.rating
+                    && let Some(score) = calculate_score(&rating)
+                {
+                    Span::raw(format! {"    ☕ {}", score})
+                } else {
+                    Span::raw("")
+                }
+            };
+            ListItem::new(Line::from(vec![Span::raw(c.name.clone()), score_span]))
+        })
         .collect();
     let coffee_list = List::new(coffee_names).highlight_style(Style::new().bg(Color::DarkGray));
     frame.render_stateful_widget(coffee_list, area, state);
@@ -102,17 +113,20 @@ pub fn render_input_coffee_modal(
                     .as_ref()
                     .map(value_accessor)
                     .unwrap_or_else(|| value_accessor(&DraftCoffee::default()));
-                let mut suggestion_span = Span::raw("");
-                if let Some(s) = suggestion
-                    && focus_name == focus
-                {
-                    let match_input = match input_extractor {
-                        Some(ie) => ie(&value),
-                        None => value.clone(),
-                    };
-                    let display_suggestion = &s[match_input.len()..];
-                    suggestion_span = Span::raw(display_suggestion).fg(Color::DarkGray);
-                }
+                let suggestion_span = {
+                    if let Some(s) = suggestion
+                        && focus_name == focus
+                    {
+                        let match_input = match input_extractor {
+                            Some(ie) => ie(&value),
+                            None => value.clone(),
+                        };
+                        let display_suggestion = &s[match_input.len()..];
+                        Span::raw(display_suggestion).fg(Color::DarkGray)
+                    } else {
+                        Span::raw("")
+                    }
+                };
                 let display_value = if focus_name == focus && focus != &InputFocus::Decaf {
                     value + "|"
                 } else {
