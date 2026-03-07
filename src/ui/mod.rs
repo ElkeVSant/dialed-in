@@ -207,6 +207,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 }
                 if state.ui_state.mode == Mode::Search {
                     render_search_bar(
+                        &state.ui_state.list_state.selected(),
                         state.ui_state.query.as_deref().unwrap_or_default(),
                         frame,
                         areas[1],

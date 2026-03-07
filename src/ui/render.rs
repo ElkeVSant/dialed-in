@@ -119,7 +119,15 @@ pub fn render_input_coffee_modal(
                         suggestion_span = Span::raw(suggestion).fg(Color::DarkGray);
                     }
                 }
-                let line = Line::from(vec![Span::raw(value).fg(Color::White), suggestion_span]);
+                let display_value = if focus_name == focus && focus != &InputFocus::Decaf {
+                    value + "|"
+                } else {
+                    value
+                };
+                let line = Line::from(vec![
+                    Span::raw(display_value).fg(Color::White),
+                    suggestion_span,
+                ]);
                 frame.render_widget(line, coffee_areas[1]);
             }
         });
@@ -258,7 +266,7 @@ pub fn render_error(error: &str, frame: &mut Frame, area: Rect) {
     );
 }
 
-pub fn render_search_bar(query: &str, frame: &mut Frame, area: Rect) {
+pub fn render_search_bar(selection: &Option<usize>, query: &str, frame: &mut Frame, area: Rect) {
     let search_area = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
@@ -275,5 +283,9 @@ pub fn render_search_bar(query: &str, frame: &mut Frame, area: Rect) {
     let inner_search_area = bar.inner(search_area);
     frame.render_widget(Clear, search_area);
     frame.render_widget(bar, search_area);
-    frame.render_widget(Paragraph::new(query), inner_search_area);
+    if selection.is_none() {
+        frame.render_widget(Paragraph::new(format!("{}|", query)), inner_search_area);
+    } else {
+        frame.render_widget(Paragraph::new(query), inner_search_area);
+    }
 }
