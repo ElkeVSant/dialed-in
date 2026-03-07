@@ -239,6 +239,26 @@ pub fn pop_optional_char(field: &mut Option<String>) {
     }
 }
 
+pub fn accept_suggestion(coffee: &mut DraftCoffee, focus: &InputFocus, suggestion: String) {
+    match focus {
+        InputFocus::Origin => coffee.origin = Some(suggestion),
+        InputFocus::Varieties => {
+            let mut vars: Vec<&str> = coffee
+                .varieties
+                .as_deref()
+                .unwrap_or_default()
+                .split(", ")
+                .collect();
+            vars.pop();
+            coffee.varieties = Some(vars.join(", ") + &suggestion);
+        }
+        InputFocus::Process => coffee.process = Some(suggestion),
+        InputFocus::Roaster => coffee.roaster = Some(suggestion),
+        InputFocus::DecaffeinationProcess => coffee.decaffeination_process = Some(suggestion),
+        _ => (),
+    }
+}
+
 fn set_score(score: &mut Option<u8>, value: char) {
     match value {
         '+' => *score = Some((score.unwrap_or(0) + 1).min(5)),

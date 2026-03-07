@@ -11,10 +11,6 @@ use ratatui::{
     widgets::ListState,
 };
 
-use crate::app::{
-    add_coffee, delete_coffee, filter_coffees, list_coffees, list_decaffeination_processes,
-    list_origins, list_processes, list_roasters, list_varieties, update_coffee,
-};
 use crate::coffee::Coffee;
 use crate::ui::draft::{
     DraftCoffee, convert_coffee_to_draft, convert_draft_to_coffee, get_match_input,
@@ -23,6 +19,13 @@ use crate::ui::draft::{
 use crate::ui::render::{
     render_app_name, render_coffees, render_delete_coffee_modal, render_error,
     render_input_coffee_modal, render_search_bar,
+};
+use crate::{
+    app::{
+        add_coffee, delete_coffee, filter_coffees, list_coffees, list_decaffeination_processes,
+        list_origins, list_processes, list_roasters, list_varieties, update_coffee,
+    },
+    ui::draft::accept_suggestion,
 };
 
 #[derive(Default)]
@@ -57,7 +60,7 @@ struct InputModalState {
     suggestions: Option<Vec<String>>,
 }
 
-#[derive(Default, PartialEq)]
+#[derive(Clone, Default, PartialEq)]
 enum InputFocus {
     #[default]
     Name,
@@ -400,11 +403,34 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             mode_state.suggestions = mode_state.focus.load_suggestions(&path);
                         }
                         KeyCode::Enter => {
+                            let focus = mode_state.focus.clone();
+
+                            let mut suggestion: Option<String> = None;
+                            if let Some(suggestions) = mode_state.suggestions.as_ref()
+                                && let Some(coffee) = &mode_state.coffee
+                            {
+                                let potential_match = get_match_input(&mode_state.focus, coffee);
+                                if let Some(pm) = potential_match {
+                                    suggestion = suggestions
+                                        .iter()
+                                        .find(|s| s.starts_with(&pm))
+                                        .map(|s| s.to_string());
+                                }
+                            }
+
                             if mode_state.focus == InputFocus::Decaf {
                                 mode_state
                                     .coffee
                                     .get_or_insert_with(DraftCoffee::default)
                                     .toggle_decaf();
+                            } else if suggestion.is_some()
+                                && let Some(coffee) = mode_state.coffee.as_mut()
+                            {
+                                accept_suggestion(
+                                    coffee,
+                                    &focus,
+                                    suggestion.expect("suggestion disappeared"),
+                                );
                             } else if let Some(draft) = &mode_state.coffee {
                                 match convert_draft_to_coffee(draft) {
                                     Ok(coffee) => {
