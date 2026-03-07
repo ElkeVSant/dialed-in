@@ -12,16 +12,17 @@ use ratatui::{
 };
 
 use crate::app::{
-    add_coffee, delete_coffee, list_coffees, list_decaffeination_processes, list_origins,
-    list_processes, list_roasters, list_varieties, update_coffee,
+    add_coffee, delete_coffee, filter_coffees, list_coffees, list_decaffeination_processes,
+    list_origins, list_processes, list_roasters, list_varieties, update_coffee,
 };
 use crate::coffee::Coffee;
 use crate::ui::draft::{
-    DraftCoffee, convert_coffee_to_draft, convert_draft_to_coffee, update_draft_coffee,
+    DraftCoffee, convert_coffee_to_draft, convert_draft_to_coffee, pop_optional_char,
+    update_draft_coffee,
 };
 use crate::ui::render::{
     render_app_name, render_coffees, render_delete_coffee_modal, render_error,
-    render_input_coffee_modal,
+    render_input_coffee_modal, render_search_bar,
 };
 
 #[derive(Default)]
@@ -35,6 +36,7 @@ struct UiState {
     mode: Mode,
     input_state: Option<InputModalState>,
     list_state: ListState,
+    query: Option<String>,
     error: Option<String>,
 }
 
@@ -45,6 +47,7 @@ enum Mode {
     Add,
     Update,
     Delete,
+    Search,
 }
 
 #[derive(Default)]
@@ -194,16 +197,20 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 .split(frame.area());
 
             render_app_name(frame, areas[0]);
-            render_coffees(
-                &mut state.ui_state.list_state,
-                &state.coffees,
-                frame,
-                areas[1],
-            );
 
-            if state.ui_state.mode == Mode::Normal {
+            let list = filter_coffees(&state.coffees, state.ui_state.query.as_deref());
+            render_coffees(&mut state.ui_state.list_state, &list, frame, areas[1]);
+
+            if state.ui_state.mode == Mode::Normal || state.ui_state.mode == Mode::Search {
                 if let Some(message) = &state.ui_state.error {
                     render_error(message, frame, areas[1]);
+                }
+                if state.ui_state.mode == Mode::Search {
+                    render_search_bar(
+                        state.ui_state.query.as_deref().unwrap_or_default(),
+                        frame,
+                        areas[1],
+                    );
                 }
             } else if state.ui_state.mode == Mode::Add || state.ui_state.mode == Mode::Update {
                 let title = if state.ui_state.mode == Mode::Add {
@@ -226,7 +233,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 );
             } else if state.ui_state.mode == Mode::Delete {
                 render_delete_coffee_modal(
-                    &state.coffees[state.ui_state.list_state.selected().expect("no selection")],
+                    list[state.ui_state.list_state.selected().expect("no selection")],
                     frame,
                     areas[1],
                 );
@@ -258,6 +265,10 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             state.ui_state.list_state.select_previous();
                         }
                     }
+                    KeyCode::Char('/') => {
+                        state.ui_state.list_state.select(None);
+                        state.ui_state.mode = Mode::Search;
+                    }
                     KeyCode::Char('a') => {
                         state.ui_state.mode = Mode::Add;
                         state.ui_state.input_state = Some(InputModalState::default());
@@ -287,6 +298,75 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                         } else {
                             state.ui_state.mode = Mode::Delete;
                         }
+                    }
+                    _ => (),
+                },
+                Mode::Search => match key.code {
+                    KeyCode::Esc => {
+                        state.ui_state.query = None;
+                        state.ui_state.mode = Mode::Normal;
+                    }
+                    KeyCode::Tab => {
+                        if let Some(index) = state.ui_state.list_state.selected() {
+                            let list =
+                                filter_coffees(&state.coffees, state.ui_state.query.as_deref());
+                            if index == list.len() - 1 {
+                                state.ui_state.list_state.select(None);
+                            } else {
+                                state.ui_state.list_state.select_next();
+                            }
+                        } else {
+                            state.ui_state.list_state.select_first();
+                        }
+                    }
+                    KeyCode::BackTab => {
+                        state.ui_state.error = None;
+                        if let Some(index) = state.ui_state.list_state.selected() {
+                            if index == 0 {
+                                state.ui_state.list_state.select(None);
+                            } else {
+                                state.ui_state.list_state.select_previous();
+                            }
+                        } else {
+                            state.ui_state.list_state.select_last();
+                        }
+                    }
+                    KeyCode::Char(c) => {
+                        if state.ui_state.list_state.selected().is_none() {
+                            state.ui_state.query.get_or_insert_with(String::new).push(c);
+                        } else {
+                            match c {
+                                'a' => {
+                                    state.ui_state.mode = Mode::Add;
+                                    state.ui_state.input_state = Some(InputModalState::default());
+                                    state.ui_state.error = None;
+                                }
+                                'e' | 'u' => {
+                                    let list = filter_coffees(
+                                        &state.coffees,
+                                        state.ui_state.query.as_deref(),
+                                    );
+                                    state.ui_state.input_state = Some(InputModalState {
+                                        coffee: Some(convert_coffee_to_draft(
+                                            list[state
+                                                .ui_state
+                                                .list_state
+                                                .selected()
+                                                .expect("dropped all beans")],
+                                        )),
+                                        ..InputModalState::default()
+                                    });
+                                    state.ui_state.error = None;
+                                    state.ui_state.mode = Mode::Update;
+                                }
+                                'd' => state.ui_state.mode = Mode::Delete,
+
+                                _ => (),
+                            }
+                        }
+                    }
+                    KeyCode::Backspace => {
+                        pop_optional_char(&mut state.ui_state.query);
                     }
                     _ => (),
                 },
@@ -325,7 +405,11 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                                         state.ui_state.input_state = None;
                                         state.coffees =
                                             list_coffees(&path).expect("could not list coffees");
-                                        state.ui_state.mode = Mode::Normal;
+                                        if state.ui_state.query.is_some() {
+                                            state.ui_state.mode = Mode::Search;
+                                        } else {
+                                            state.ui_state.mode = Mode::Normal;
+                                        }
                                     }
                                     Err(e) => state.ui_state.error = Some(e.to_string()),
                                 }
@@ -374,8 +458,9 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 }
                 Mode::Delete => match key.code {
                     KeyCode::Enter => {
+                        let list = filter_coffees(&state.coffees, state.ui_state.query.as_deref());
                         delete_coffee(
-                            state.coffees[state
+                            list[state
                                 .ui_state
                                 .list_state
                                 .selected()
@@ -388,7 +473,13 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                         state.ui_state.list_state = ListState::default();
                         state.ui_state.mode = Mode::Normal;
                     }
-                    KeyCode::Esc => state.ui_state.mode = Mode::Normal,
+                    KeyCode::Esc => {
+                        if state.ui_state.query.is_some() {
+                            state.ui_state.mode = Mode::Search;
+                        } else {
+                            state.ui_state.mode = Mode::Normal;
+                        }
+                    }
                     KeyCode::Char('q') => break Ok(()),
                     _ => (),
                 },

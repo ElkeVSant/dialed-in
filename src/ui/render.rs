@@ -24,7 +24,7 @@ pub fn render_app_name(frame: &mut Frame, area: Rect) {
     frame.render_widget(Paragraph::new(DIALED_IN), area);
 }
 
-pub fn render_coffees(state: &mut ListState, coffees: &[Coffee], frame: &mut Frame, area: Rect) {
+pub fn render_coffees(state: &mut ListState, coffees: &[&Coffee], frame: &mut Frame, area: Rect) {
     let coffee_names: Vec<ListItem> = coffees
         .iter()
         .map(|c| ListItem::new(c.name.clone()))
@@ -256,4 +256,24 @@ pub fn render_error(error: &str, frame: &mut Frame, area: Rect) {
             .alignment(HorizontalAlignment::Right),
         error_area,
     );
+}
+
+pub fn render_search_bar(query: &str, frame: &mut Frame, area: Rect) {
+    let search_area = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Min(0),
+            Constraint::Length(50.max(query.len() as u16)),
+        ])
+        .split(
+            Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(3), Constraint::Min(0)])
+                .split(area)[0],
+        )[1];
+    let bar = Block::bordered().title("Search");
+    let inner_search_area = bar.inner(search_area);
+    frame.render_widget(Clear, search_area);
+    frame.render_widget(bar, search_area);
+    frame.render_widget(Paragraph::new(query), inner_search_area);
 }

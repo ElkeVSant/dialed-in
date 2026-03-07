@@ -229,9 +229,13 @@ pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &InputFocus,
     }
 }
 
-fn pop_optional_char(field: &mut Option<String>) {
-    if let Some(s) = field.as_mut() {
-        s.pop();
+pub fn pop_optional_char(field: &mut Option<String>) {
+    if field.is_some() {
+        if field.as_ref().unwrap().len() == 1 {
+            *field = None;
+        } else {
+            field.as_mut().unwrap().pop();
+        }
     }
 }
 
