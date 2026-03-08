@@ -24,13 +24,33 @@ pub fn render_app_name(frame: &mut Frame, area: Rect) {
     frame.render_widget(Paragraph::new(DIALED_IN), area);
 }
 
-pub fn render_coffees(state: &mut ListState, coffees: &[&Coffee], frame: &mut Frame, area: Rect) {
-    let list_areas = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Min(0), Constraint::Length(6)])
-        .split(area);
+pub fn render_coffees(
+    state: &mut ListState,
+    show_grind_size: bool,
+    coffees: &[&Coffee],
+    frame: &mut Frame,
+    area: Rect,
+) {
+    let list_areas = {
+        if show_grind_size {
+            Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Min(0),
+                    Constraint::Length(10),
+                    Constraint::Length(6),
+                ])
+                .split(area)
+        } else {
+            Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Min(0), Constraint::Length(6)])
+                .split(area)
+        }
+    };
     let mut names = Vec::new();
     let mut ratings = Vec::new();
+    let mut grind_sizes = Vec::new();
     for coffee in coffees {
         names.push(coffee.name.clone());
         ratings.push({
@@ -42,11 +62,25 @@ pub fn render_coffees(state: &mut ListState, coffees: &[&Coffee], frame: &mut Fr
                 "".to_string()
             }
         });
+        if show_grind_size {
+            grind_sizes.push({
+                if let Some(bs) = coffee.brew_settings {
+                    bs.grind_size.to_string()
+                } else {
+                    "".to_string()
+                }
+            })
+        }
     }
-    let coffee_list = List::new(names).highlight_style(Style::new().bg(Color::DarkGray));
+    let selected_style = Style::new().bg(Color::DarkGray);
+    let coffee_list = List::new(names).highlight_style(selected_style);
     frame.render_stateful_widget(coffee_list, list_areas[0], state);
-    let rating_list = List::new(ratings).highlight_style(Style::new().bg(Color::DarkGray));
-    frame.render_stateful_widget(rating_list, list_areas[1], state);
+    let rating_list = List::new(ratings).highlight_style(selected_style);
+    frame.render_stateful_widget(rating_list, list_areas[list_areas.len() - 1], state);
+    if show_grind_size {
+        let grind_size_list = List::new(grind_sizes).highlight_style(selected_style);
+        frame.render_stateful_widget(grind_size_list, list_areas[1], state);
+    }
 }
 
 pub fn render_input_coffee_modal(

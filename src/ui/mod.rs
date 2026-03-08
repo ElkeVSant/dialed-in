@@ -39,6 +39,7 @@ struct UiState {
     mode: Mode,
     input_state: Option<InputModalState>,
     list_state: ListState,
+    show_grind_size: bool,
     query: Option<String>,
     error: Option<String>,
 }
@@ -202,7 +203,13 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
             render_app_name(frame, areas[0]);
 
             let list = filter_coffees(&state.coffees, state.ui_state.query.as_deref());
-            render_coffees(&mut state.ui_state.list_state, &list, frame, areas[1]);
+            render_coffees(
+                &mut state.ui_state.list_state,
+                state.ui_state.show_grind_size,
+                &list,
+                frame,
+                areas[1],
+            );
 
             if state.ui_state.mode == Mode::Normal || state.ui_state.mode == Mode::Search {
                 if let Some(message) = &state.ui_state.error {
@@ -285,6 +292,9 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                     KeyCode::Char('/') => {
                         state.ui_state.list_state.select(None);
                         state.ui_state.mode = Mode::Search;
+                    }
+                    KeyCode::Char('g') => {
+                        state.ui_state.show_grind_size = !state.ui_state.show_grind_size;
                     }
                     KeyCode::Char('a') => {
                         state.ui_state.mode = Mode::Add;
