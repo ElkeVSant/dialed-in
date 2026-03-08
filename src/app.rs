@@ -48,7 +48,35 @@ pub fn filter_coffees<'a>(list: &'a [Coffee], query: Option<&str>) -> Vec<&'a Co
     if let Some(query) = query {
         let lc_query = &query.to_lowercase();
         list.iter()
-            .filter(|c| c.name.to_lowercase().contains(lc_query))
+            .filter(|c| {
+                c.name.to_lowercase().contains(lc_query)
+                    || c.origin
+                        .as_deref()
+                        .unwrap_or("")
+                        .to_lowercase()
+                        .contains(lc_query)
+                    || c.varieties
+                        .as_deref()
+                        .unwrap_or_default()
+                        .join(", ")
+                        .to_lowercase()
+                        .contains(lc_query)
+                    || c.process
+                        .as_deref()
+                        .unwrap_or("")
+                        .to_lowercase()
+                        .contains(lc_query)
+                    || c.decaffeination_process
+                        .as_deref()
+                        .unwrap_or("")
+                        .to_lowercase()
+                        .contains(lc_query)
+                    || c.notes
+                        .as_deref()
+                        .unwrap_or("")
+                        .to_lowercase()
+                        .contains(lc_query)
+            })
             .collect()
     } else {
         list.iter().collect()
