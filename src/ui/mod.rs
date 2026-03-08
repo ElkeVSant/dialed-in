@@ -374,6 +374,10 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             state.ui_state.query.get_or_insert_with(String::new).push(c);
                         } else {
                             match c {
+                                'g' => {
+                                    state.ui_state.show_grind_size =
+                                        !state.ui_state.show_grind_size;
+                                }
                                 'a' => {
                                     state.ui_state.mode = Mode::Add;
                                     state.ui_state.input_state = Some(InputModalState::default());
