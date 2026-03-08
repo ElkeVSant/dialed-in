@@ -83,6 +83,7 @@ enum InputFocus {
     BodyPersonal,
     AftertasteStrength,
     AftertastePersonal,
+    Notes,
 }
 
 impl InputFocus {
@@ -122,13 +123,15 @@ impl InputFocus {
             InputFocus::BodyStrength => InputFocus::BodyPersonal,
             InputFocus::BodyPersonal => InputFocus::AftertasteStrength,
             InputFocus::AftertasteStrength => InputFocus::AftertastePersonal,
-            InputFocus::AftertastePersonal => InputFocus::Name,
+            InputFocus::AftertastePersonal => InputFocus::Notes,
+            InputFocus::Notes => InputFocus::Name,
         }
     }
 
     fn previous(&self, coffee: &Option<DraftCoffee>) -> InputFocus {
         match self {
-            InputFocus::Name => InputFocus::AftertastePersonal,
+            InputFocus::Name => InputFocus::Notes,
+            InputFocus::Notes => InputFocus::AftertastePersonal,
             InputFocus::Origin => InputFocus::Name,
             InputFocus::Varieties => InputFocus::Origin,
             InputFocus::Process => InputFocus::Varieties,

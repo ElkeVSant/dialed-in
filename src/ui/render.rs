@@ -3,11 +3,13 @@ use ratatui::{
     layout::{Constraint, Direction, HorizontalAlignment, Layout, Margin, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, Clear, List, ListState, Paragraph},
+    widgets::{Block, Clear, List, ListState, Paragraph, Wrap},
 };
 
 use crate::coffee::Coffee;
-use crate::ui::fields::{DraftField, build_coffee_fields, build_rating_fields, calculate_score};
+use crate::ui::fields::{
+    DraftField, build_coffee_fields, build_notes_field, build_rating_fields, calculate_score,
+};
 use crate::ui::{DraftCoffee, InputFocus};
 
 const DIALED_IN: &str = r#"
@@ -100,17 +102,20 @@ pub fn render_input_coffee_modal(
 
     let coffee_fields = build_coffee_fields(coffee);
     let rating_fields = build_rating_fields(coffee);
+    let notes_field = build_notes_field();
 
-    let inner_modal_areas = Layout::default()
+    let content_areas = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(
-            coffee_fields.len().max(rating_fields.len()) as u16,
-        )])
+        .constraints([
+            Constraint::Length(coffee_fields.len().max(rating_fields.len()) as u16),
+            Constraint::Max(1),
+            Constraint::Length(7),
+        ])
         .split(inner_modal_area);
     let field_areas = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)])
-        .split(inner_modal_areas[0]);
+        .split(content_areas[0]);
     let coffee_areas = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
@@ -226,6 +231,35 @@ pub fn render_input_coffee_modal(
                 frame.render_widget(Paragraph::new(value), summary_areas[1]);
             }
         });
+
+    if let DraftField::Field(label, focus_name, value_accessor, _) = &notes_field {
+        let notes_area = content_areas[2].inner(Margin::new(2, 1));
+        let notes_frame = {
+            if focus == focus_name {
+                Block::bordered()
+                    .title(format!("{}: ", label))
+                    .title_style(Style::default().bg(Color::DarkGray))
+            } else {
+                Block::bordered().title(format!("{}: ", label))
+            }
+        };
+        let notes_inner_area = notes_frame.inner(notes_area);
+        frame.render_widget(notes_frame, notes_area);
+        let value = coffee
+            .as_ref()
+            .map(value_accessor)
+            .unwrap_or_else(|| value_accessor(&DraftCoffee::default()));
+        let display_value = if focus_name == focus {
+            value + "|"
+        } else {
+            value
+        };
+        frame.render_widget(
+            Paragraph::new(display_value).wrap(Wrap { trim: true }),
+            notes_inner_area,
+        );
+    }
+
     if let Some(message) = error {
         render_error(message, frame, inner_modal_area);
     }

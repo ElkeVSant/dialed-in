@@ -16,6 +16,7 @@ pub struct DraftCoffee {
     pub roaster: Option<String>,
     pub brew_settings: Option<DraftBrewSettings>,
     pub rating: Option<Rating>,
+    pub notes: Option<String>,
 }
 
 #[derive(Default)]
@@ -150,6 +151,7 @@ pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &InputFocus,
                     .get_or_insert_with(Score::default);
                 set_score(&mut aftertaste.personal, c);
             }
+            InputFocus::Notes => coffee.notes.get_or_insert_with(String::new).push(c),
             _ => (),
         },
         KeyCode::Backspace => match focus {
@@ -223,6 +225,7 @@ pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &InputFocus,
                     aftertaste.personal = None;
                 }
             }
+            InputFocus::Notes => pop_optional_char(&mut coffee.notes),
             _ => (),
         },
         _ => (),
@@ -304,6 +307,7 @@ pub fn convert_draft_to_coffee(draft: &DraftCoffee) -> Result<Coffee, Box<dyn st
             body: r.body,
             aftertaste: r.aftertaste,
         }),
+        notes: draft.notes.clone(),
         ..Default::default()
     })
 }
@@ -323,6 +327,7 @@ pub fn convert_coffee_to_draft(coffee: &Coffee) -> DraftCoffee {
             grind_size_adjustment: bs.grind_size_adjustment,
         }),
         rating: coffee.rating,
+        notes: coffee.notes.clone(),
     }
 }
 

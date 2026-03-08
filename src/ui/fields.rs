@@ -265,6 +265,15 @@ pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     fields
 }
 
+pub fn build_notes_field() -> DraftField {
+    DraftField::Field(
+        "Notes",
+        InputFocus::Notes,
+        Box::new(|c| c.notes.clone().unwrap_or_default()),
+        None,
+    )
+}
+
 fn format_score(score: u8) -> String {
     format!(
         "{}{}",
