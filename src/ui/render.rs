@@ -190,7 +190,7 @@ pub fn render_input_coffee_modal(
             DraftField::Header(label) => {
                 frame.render_widget(Paragraph::new(format!("{}: ", *label)), *area)
             }
-            DraftField::Field(label, focus_name, value_accessor, _) => {
+            DraftField::ScoreField(label, focus_name, value_accessor) => {
                 let rating_areas = Layout::default()
                     .direction(Direction::Horizontal)
                     .constraints([
@@ -212,7 +212,10 @@ pub fn render_input_coffee_modal(
                     .as_ref()
                     .map(value_accessor)
                     .unwrap_or_else(|| value_accessor(&DraftCoffee::default()));
-                frame.render_widget(Paragraph::new(value), rating_areas[1]);
+                frame.render_widget(
+                    Paragraph::new(format_score(value)).fg(determine_colour(focus_name, value)),
+                    rating_areas[1],
+                );
             }
             DraftField::Spacing => frame.render_widget(Paragraph::new("".to_string()), *area),
             DraftField::Summary(label, value_accessor) => {
@@ -230,6 +233,7 @@ pub fn render_input_coffee_modal(
                     .unwrap_or_else(|| value_accessor(&DraftCoffee::default()));
                 frame.render_widget(Paragraph::new(value), summary_areas[1]);
             }
+            _ => unreachable!(),
         });
 
     if let DraftField::Field(label, focus_name, value_accessor, _) = &notes_field {
@@ -263,6 +267,65 @@ pub fn render_input_coffee_modal(
     if let Some(message) = error {
         render_error(message, frame, inner_modal_area);
     }
+}
+
+fn determine_colour(focus: &InputFocus, score: u8) -> Color {
+    match focus {
+        InputFocus::AromaStrength | InputFocus::AromaPersonal => match score {
+            0 => Color::default(),
+            1 => Color::Rgb(212, 219, 252),
+            2 => Color::Rgb(200, 202, 255),
+            3 => Color::Rgb(190, 180, 252),
+            4 => Color::Rgb(172, 163, 228),
+            5 => Color::Rgb(151, 143, 203),
+            _ => unreachable!(),
+        },
+        InputFocus::SweetnessStrength | InputFocus::SweetnessPersonal => match score {
+            0 => Color::default(),
+            1 => Color::Rgb(249, 249, 250),
+            2 => Color::Rgb(249, 235, 238),
+            3 => Color::Rgb(245, 223, 229),
+            4 => Color::Rgb(240, 209, 219),
+            5 => Color::Rgb(234, 195, 209),
+            _ => unreachable!(),
+        },
+        InputFocus::AcidityStrength | InputFocus::AcidityPersonal => match score {
+            0 => Color::default(),
+            1 => Color::Rgb(246, 248, 236),
+            2 => Color::Rgb(230, 239, 214),
+            3 => Color::Rgb(200, 219, 168),
+            4 => Color::Rgb(181, 209, 145),
+            5 => Color::Rgb(163, 199, 125),
+            _ => unreachable!(),
+        },
+        InputFocus::BodyStrength | InputFocus::BodyPersonal => match score {
+            0 => Color::default(),
+            1 => Color::Rgb(244, 249, 249),
+            2 => Color::Rgb(225, 240, 241),
+            3 => Color::Rgb(210, 232, 233),
+            4 => Color::Rgb(189, 221, 225),
+            5 => Color::Rgb(168, 211, 217),
+            _ => unreachable!(),
+        },
+        InputFocus::AftertasteStrength | InputFocus::AftertastePersonal => match score {
+            0 => Color::default(),
+            1 => Color::Rgb(254, 247, 242),
+            2 => Color::Rgb(251, 236, 224),
+            3 => Color::Rgb(247, 224, 208),
+            4 => Color::Rgb(242, 211, 193),
+            5 => Color::Rgb(238, 200, 179),
+            _ => unreachable!(),
+        },
+        _ => Color::default(),
+    }
+}
+
+fn format_score(score: u8) -> String {
+    format!(
+        "{}{}",
+        "● ".repeat(score as usize),
+        "○ ".repeat((5 - score) as usize)
+    )
 }
 
 pub fn render_delete_coffee_modal(coffee: &Coffee, frame: &mut Frame, area: Rect) {

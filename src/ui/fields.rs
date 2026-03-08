@@ -2,11 +2,13 @@ use crate::coffee::Rating;
 use crate::ui::{DraftCoffee, InputFocus};
 
 type DraftFieldAccessor = Box<dyn Fn(&DraftCoffee) -> String>;
+type DraftScoreAccessor = Box<dyn Fn(&DraftCoffee) -> u8>;
 type InputExtractor = Option<Box<dyn Fn(&str) -> String>>;
 
 pub enum DraftField {
     Header(&'static str),
     Field(&'static str, InputFocus, DraftFieldAccessor, InputExtractor),
+    ScoreField(&'static str, InputFocus, DraftScoreAccessor),
     Spacing,
     Summary(&'static str, DraftFieldAccessor),
 }
@@ -103,149 +105,119 @@ pub fn build_coffee_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
 pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     let mut fields = vec![
         DraftField::Header("Aroma"),
-        DraftField::Field(
+        DraftField::ScoreField(
             " Strength",
             InputFocus::AromaStrength,
             Box::new(|c| {
-                format_score(
-                    c.rating
-                        .as_ref()
-                        .and_then(|r| r.aroma.as_ref())
-                        .and_then(|a| a.strength)
-                        .unwrap_or(0),
-                )
+                c.rating
+                    .as_ref()
+                    .and_then(|r| r.aroma.as_ref())
+                    .and_then(|a| a.strength)
+                    .unwrap_or(0)
             }),
-            None,
         ),
-        DraftField::Field(
+        DraftField::ScoreField(
             " Personal",
             InputFocus::AromaPersonal,
             Box::new(|c| {
-                format_score(
-                    c.rating
-                        .as_ref()
-                        .and_then(|r| r.aroma.as_ref())
-                        .and_then(|a| a.personal)
-                        .unwrap_or(0),
-                )
+                c.rating
+                    .as_ref()
+                    .and_then(|r| r.aroma.as_ref())
+                    .and_then(|a| a.personal)
+                    .unwrap_or(0)
             }),
-            None,
         ),
         DraftField::Header("Sweetness"),
-        DraftField::Field(
+        DraftField::ScoreField(
             " Strength",
             InputFocus::SweetnessStrength,
             Box::new(|c| {
-                format_score(
-                    c.rating
-                        .as_ref()
-                        .and_then(|r| r.sweetness.as_ref())
-                        .and_then(|a| a.strength)
-                        .unwrap_or(0),
-                )
+                c.rating
+                    .as_ref()
+                    .and_then(|r| r.sweetness.as_ref())
+                    .and_then(|a| a.strength)
+                    .unwrap_or(0)
             }),
-            None,
         ),
-        DraftField::Field(
+        DraftField::ScoreField(
             " Personal",
             InputFocus::SweetnessPersonal,
             Box::new(|c| {
-                format_score(
-                    c.rating
-                        .as_ref()
-                        .and_then(|r| r.sweetness.as_ref())
-                        .and_then(|a| a.personal)
-                        .unwrap_or(0),
-                )
+                c.rating
+                    .as_ref()
+                    .and_then(|r| r.sweetness.as_ref())
+                    .and_then(|a| a.personal)
+                    .unwrap_or(0)
             }),
-            None,
         ),
         DraftField::Header("Acidity"),
-        DraftField::Field(
+        DraftField::ScoreField(
             " Strength",
             InputFocus::AcidityStrength,
             Box::new(|c| {
-                format_score(
-                    c.rating
-                        .as_ref()
-                        .and_then(|r| r.acidity.as_ref())
-                        .and_then(|a| a.strength)
-                        .unwrap_or(0),
-                )
+                c.rating
+                    .as_ref()
+                    .and_then(|r| r.acidity.as_ref())
+                    .and_then(|a| a.strength)
+                    .unwrap_or(0)
             }),
-            None,
         ),
-        DraftField::Field(
+        DraftField::ScoreField(
             " Personal",
             InputFocus::AcidityPersonal,
             Box::new(|c| {
-                format_score(
-                    c.rating
-                        .as_ref()
-                        .and_then(|r| r.acidity.as_ref())
-                        .and_then(|a| a.personal)
-                        .unwrap_or(0),
-                )
+                c.rating
+                    .as_ref()
+                    .and_then(|r| r.acidity.as_ref())
+                    .and_then(|a| a.personal)
+                    .unwrap_or(0)
             }),
-            None,
         ),
         DraftField::Header("Body"),
-        DraftField::Field(
+        DraftField::ScoreField(
             " Strength",
             InputFocus::BodyStrength,
             Box::new(|c| {
-                format_score(
-                    c.rating
-                        .as_ref()
-                        .and_then(|r| r.body.as_ref())
-                        .and_then(|a| a.strength)
-                        .unwrap_or(0),
-                )
+                c.rating
+                    .as_ref()
+                    .and_then(|r| r.body.as_ref())
+                    .and_then(|a| a.strength)
+                    .unwrap_or(0)
             }),
-            None,
         ),
-        DraftField::Field(
+        DraftField::ScoreField(
             " Personal",
             InputFocus::BodyPersonal,
             Box::new(|c| {
-                format_score(
-                    c.rating
-                        .as_ref()
-                        .and_then(|r| r.body.as_ref())
-                        .and_then(|a| a.personal)
-                        .unwrap_or(0),
-                )
+                c.rating
+                    .as_ref()
+                    .and_then(|r| r.body.as_ref())
+                    .and_then(|a| a.personal)
+                    .unwrap_or(0)
             }),
-            None,
         ),
         DraftField::Header("Aftertaste"),
-        DraftField::Field(
+        DraftField::ScoreField(
             " Strength",
             InputFocus::AftertasteStrength,
             Box::new(|c| {
-                format_score(
-                    c.rating
-                        .as_ref()
-                        .and_then(|r| r.aftertaste.as_ref())
-                        .and_then(|a| a.strength)
-                        .unwrap_or(0),
-                )
+                c.rating
+                    .as_ref()
+                    .and_then(|r| r.aftertaste.as_ref())
+                    .and_then(|a| a.strength)
+                    .unwrap_or(0)
             }),
-            None,
         ),
-        DraftField::Field(
+        DraftField::ScoreField(
             " Personal",
             InputFocus::AftertastePersonal,
             Box::new(|c| {
-                format_score(
-                    c.rating
-                        .as_ref()
-                        .and_then(|r| r.aftertaste.as_ref())
-                        .and_then(|a| a.personal)
-                        .unwrap_or(0),
-                )
+                c.rating
+                    .as_ref()
+                    .and_then(|r| r.aftertaste.as_ref())
+                    .and_then(|a| a.personal)
+                    .unwrap_or(0)
             }),
-            None,
         ),
     ];
     if let Some(draft) = draft
@@ -271,14 +243,6 @@ pub fn build_notes_field() -> DraftField {
         InputFocus::Notes,
         Box::new(|c| c.notes.clone().unwrap_or_default()),
         None,
-    )
-}
-
-fn format_score(score: u8) -> String {
-    format!(
-        "{}{}",
-        "● ".repeat(score as usize),
-        "○ ".repeat((5 - score) as usize)
     )
 }
 
