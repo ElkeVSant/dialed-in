@@ -195,10 +195,21 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
 
     loop {
         terminal.draw(|frame| {
-            let areas = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Length(10), Constraint::Min(0)])
-                .split(frame.area());
+            let areas = if state.ui_state.mode == Mode::Search {
+                Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([
+                        Constraint::Length(10),
+                        Constraint::Length(3),
+                        Constraint::Min(0),
+                    ])
+                    .split(frame.area())
+            } else {
+                Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([Constraint::Length(10), Constraint::Min(0)])
+                    .split(frame.area())
+            };
 
             render_app_name(frame, areas[0]);
 
@@ -208,12 +219,12 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 state.ui_state.show_grind_size,
                 &list,
                 frame,
-                areas[1],
+                areas[areas.len() - 1],
             );
 
             if state.ui_state.mode == Mode::Normal || state.ui_state.mode == Mode::Search {
                 if let Some(message) = &state.ui_state.error {
-                    render_error(message, frame, areas[1]);
+                    render_error(message, frame, areas[areas.len() - 1]);
                 }
                 if state.ui_state.mode == Mode::Search {
                     render_search_bar(

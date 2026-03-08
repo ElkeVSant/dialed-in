@@ -319,22 +319,10 @@ pub fn render_error(error: &str, frame: &mut Frame, area: Rect) {
 }
 
 pub fn render_search_bar(selection: &Option<usize>, query: &str, frame: &mut Frame, area: Rect) {
-    let search_area = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Min(0),
-            Constraint::Length(50.max(query.len() as u16)),
-        ])
-        .split(
-            Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Length(3), Constraint::Min(0)])
-                .split(area)[0],
-        )[1];
     let bar = Block::bordered().title("Search");
-    let inner_search_area = bar.inner(search_area);
-    frame.render_widget(Clear, search_area);
-    frame.render_widget(bar, search_area);
+    let inner_search_area = bar.inner(area);
+    frame.render_widget(Clear, area);
+    frame.render_widget(bar, area);
     if selection.is_none() {
         frame.render_widget(Paragraph::new(format!("{}|", query)), inner_search_area);
     } else {
