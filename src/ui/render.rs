@@ -302,9 +302,14 @@ pub fn render_delete_coffee_modal(coffee: &Coffee, frame: &mut Frame, area: Rect
 
 pub fn render_error(error: &str, frame: &mut Frame, area: Rect) {
     let error_area = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(0), Constraint::Length(1)])
-        .split(area)[1];
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Min(0), Constraint::Length(error.len() as u16)])
+        .split(
+            Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Min(0), Constraint::Length(1)])
+                .split(area)[1],
+        )[1];
     frame.render_widget(
         Paragraph::new(error)
             .fg(Color::Red)
