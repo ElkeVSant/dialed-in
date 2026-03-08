@@ -283,7 +283,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 Mode::Normal => match key.code {
                     KeyCode::Char('q') => break Ok(()),
                     KeyCode::Esc => break Ok(()),
-                    KeyCode::Tab | KeyCode::Down => {
+                    KeyCode::Tab | KeyCode::Down | KeyCode::Char('j') => {
                         state.ui_state.error = None;
                         if let Some(index) = state.ui_state.list_state.selected()
                             && index == state.coffees.len() - 1
@@ -293,7 +293,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             state.ui_state.list_state.select_next();
                         }
                     }
-                    KeyCode::BackTab | KeyCode::Up => {
+                    KeyCode::BackTab | KeyCode::Up | KeyCode::Char('k') => {
                         state.ui_state.error = None;
                         if let Some(index) = state.ui_state.list_state.selected()
                             && index == 0
@@ -315,7 +315,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                         state.ui_state.input_state = Some(InputModalState::default());
                         state.ui_state.error = None;
                     }
-                    KeyCode::Char('e') | KeyCode::Char('u') => {
+                    KeyCode::Char('e') | KeyCode::Char('u') | KeyCode::Char(' ') => {
                         if state.ui_state.list_state.selected().is_none() {
                             state.ui_state.error = Some("Select a coffee to update it".to_string());
                         } else {
@@ -348,6 +348,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                         state.ui_state.mode = Mode::Normal;
                     }
                     KeyCode::Tab | KeyCode::Down => {
+                        state.ui_state.error = None;
                         if let Some(index) = state.ui_state.list_state.selected() {
                             let list =
                                 filter_coffees(&state.coffees, state.ui_state.query.as_deref());
@@ -377,6 +378,36 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             state.ui_state.query.get_or_insert_with(String::new).push(c);
                         } else {
                             match c {
+                                'j' => {
+                                    let list = filter_coffees(
+                                        &state.coffees,
+                                        state.ui_state.query.as_deref(),
+                                    );
+                                    if state
+                                        .ui_state
+                                        .list_state
+                                        .selected()
+                                        .expect("some selected but none here")
+                                        == list.len() - 1
+                                    {
+                                        state.ui_state.list_state.select(None);
+                                    } else {
+                                        state.ui_state.list_state.select_next();
+                                    }
+                                }
+                                'k' => {
+                                    if state
+                                        .ui_state
+                                        .list_state
+                                        .selected()
+                                        .expect("some selected but none here")
+                                        == 0
+                                    {
+                                        state.ui_state.list_state.select(None);
+                                    } else {
+                                        state.ui_state.list_state.select_previous();
+                                    }
+                                }
                                 'g' => {
                                     state.ui_state.show_grind_size =
                                         !state.ui_state.show_grind_size;
@@ -386,7 +417,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                                     state.ui_state.input_state = Some(InputModalState::default());
                                     state.ui_state.error = None;
                                 }
-                                'e' | 'u' => {
+                                'e' | 'u' | ' ' => {
                                     let list = filter_coffees(
                                         &state.coffees,
                                         state.ui_state.query.as_deref(),
