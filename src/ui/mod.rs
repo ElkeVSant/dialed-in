@@ -1,5 +1,6 @@
 mod draft;
 mod fields;
+mod query;
 mod render;
 
 use std::path::Path;
@@ -16,14 +17,15 @@ use crate::ui::draft::{
     DraftCoffee, convert_coffee_to_draft, convert_draft_to_coffee, get_match_input,
     pop_optional_char, update_draft_coffee,
 };
+use crate::ui::query::query_coffees;
 use crate::ui::render::{
     render_app_name, render_coffees, render_delete_coffee_modal, render_error,
     render_input_coffee_modal, render_search_bar,
 };
 use crate::{
     app::{
-        add_coffee, delete_coffee, filter_coffees, list_coffees, list_decaffeination_processes,
-        list_origins, list_processes, list_roasters, list_varieties, update_coffee,
+        add_coffee, delete_coffee, list_coffees, list_decaffeination_processes, list_origins,
+        list_processes, list_roasters, list_varieties, update_coffee,
     },
     ui::draft::accept_suggestion,
 };
@@ -216,14 +218,22 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
 
             render_app_name(frame, areas[0]);
 
-            let list = filter_coffees(&state.coffees, state.ui_state.query.as_deref());
-            render_coffees(
-                &mut state.ui_state.list_state,
-                state.ui_state.show_grind_size,
-                &list,
-                frame,
-                areas[areas.len() - 1],
-            );
+            let list = match query_coffees(&state.coffees, state.ui_state.query.as_deref()) {
+                Ok(list) => {
+                    render_coffees(
+                        &mut state.ui_state.list_state,
+                        state.ui_state.show_grind_size,
+                        &list,
+                        frame,
+                        areas[areas.len() - 1],
+                    );
+                    list
+                }
+                Err(e) => {
+                    state.ui_state.error = Some(e.message);
+                    Vec::new()
+                }
+            };
 
             if state.ui_state.mode == Mode::Normal || state.ui_state.mode == Mode::Search {
                 if let Some(message) = &state.ui_state.error {
@@ -350,12 +360,15 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                     KeyCode::Tab | KeyCode::Down => {
                         state.ui_state.error = None;
                         if let Some(index) = state.ui_state.list_state.selected() {
-                            let list =
-                                filter_coffees(&state.coffees, state.ui_state.query.as_deref());
-                            if index == list.len() - 1 {
-                                state.ui_state.list_state.select(None);
-                            } else {
-                                state.ui_state.list_state.select_next();
+                            match query_coffees(&state.coffees, state.ui_state.query.as_deref()) {
+                                Ok(list) => {
+                                    if index == list.len() - 1 {
+                                        state.ui_state.list_state.select(None);
+                                    } else {
+                                        state.ui_state.list_state.select_next();
+                                    }
+                                }
+                                Err(e) => state.ui_state.error = Some(e.message),
                             }
                         } else {
                             state.ui_state.list_state.select_first();
@@ -376,23 +389,28 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                     KeyCode::Char(c) => {
                         if state.ui_state.list_state.selected().is_none() {
                             state.ui_state.query.get_or_insert_with(String::new).push(c);
+                            state.ui_state.error = None;
                         } else {
                             match c {
                                 'j' => {
-                                    let list = filter_coffees(
+                                    match query_coffees(
                                         &state.coffees,
                                         state.ui_state.query.as_deref(),
-                                    );
-                                    if state
-                                        .ui_state
-                                        .list_state
-                                        .selected()
-                                        .expect("some selected but none here")
-                                        == list.len() - 1
-                                    {
-                                        state.ui_state.list_state.select(None);
-                                    } else {
-                                        state.ui_state.list_state.select_next();
+                                    ) {
+                                        Ok(list) => {
+                                            if state
+                                                .ui_state
+                                                .list_state
+                                                .selected()
+                                                .expect("some selected but none here")
+                                                == list.len() - 1
+                                            {
+                                                state.ui_state.list_state.select(None);
+                                            } else {
+                                                state.ui_state.list_state.select_next();
+                                            }
+                                        }
+                                        Err(e) => state.ui_state.error = Some(e.message),
                                     }
                                 }
                                 'k' => {
@@ -418,22 +436,26 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                                     state.ui_state.error = None;
                                 }
                                 'e' | 'u' | ' ' => {
-                                    let list = filter_coffees(
+                                    match query_coffees(
                                         &state.coffees,
                                         state.ui_state.query.as_deref(),
-                                    );
-                                    state.ui_state.input_state = Some(InputModalState {
-                                        coffee: Some(convert_coffee_to_draft(
-                                            list[state
-                                                .ui_state
-                                                .list_state
-                                                .selected()
-                                                .expect("dropped all beans")],
-                                        )),
-                                        ..InputModalState::default()
-                                    });
-                                    state.ui_state.error = None;
-                                    state.ui_state.mode = Mode::Update;
+                                    ) {
+                                        Ok(list) => {
+                                            state.ui_state.input_state = Some(InputModalState {
+                                                coffee: Some(convert_coffee_to_draft(
+                                                    list[state
+                                                        .ui_state
+                                                        .list_state
+                                                        .selected()
+                                                        .expect("dropped all beans")],
+                                                )),
+                                                ..InputModalState::default()
+                                            });
+                                            state.ui_state.error = None;
+                                            state.ui_state.mode = Mode::Update;
+                                        }
+                                        Err(e) => state.ui_state.error = Some(e.message),
+                                    }
                                 }
                                 'd' => state.ui_state.mode = Mode::Delete,
 
@@ -442,7 +464,10 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                         }
                     }
                     KeyCode::Backspace => {
+                        //should this not be delete action if selected and this
+                        //only if non select? review
                         pop_optional_char(&mut state.ui_state.query);
+                        state.ui_state.error = None;
                     }
                     _ => (),
                 },
@@ -559,20 +584,25 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 }
                 Mode::Delete => match key.code {
                     KeyCode::Enter => {
-                        let list = filter_coffees(&state.coffees, state.ui_state.query.as_deref());
-                        delete_coffee(
-                            list[state
-                                .ui_state
-                                .list_state
-                                .selected()
-                                .expect("dropped all beans")]
-                            .id,
-                            &path,
-                        )
-                        .expect("cannot purge grinder");
-                        state.coffees = list_coffees(&path).expect("could not list coffees");
-                        state.ui_state.list_state = ListState::default();
-                        state.ui_state.mode = Mode::Normal;
+                        match query_coffees(&state.coffees, state.ui_state.query.as_deref()) {
+                            Ok(list) => {
+                                delete_coffee(
+                                    list[state
+                                        .ui_state
+                                        .list_state
+                                        .selected()
+                                        .expect("dropped all beans")]
+                                    .id,
+                                    &path,
+                                )
+                                .expect("cannot purge grinder");
+                                state.coffees =
+                                    list_coffees(&path).expect("could not list coffees");
+                                state.ui_state.list_state = ListState::default();
+                                state.ui_state.mode = Mode::Normal;
+                            }
+                            Err(e) => state.ui_state.error = Some(e.message),
+                        }
                     }
                     KeyCode::Esc => {
                         if state.ui_state.query.is_some() {
