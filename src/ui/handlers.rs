@@ -98,6 +98,19 @@ pub fn handle_search_mode_events(state: &mut State, key: &KeyEvent, path: &Path)
             state.ui_state.error = None;
             select_previous_search(state);
         }
+        KeyCode::Enter => {
+            if let Some(search_state) = &mut state.ui_state.search_state
+                && let Some(suggestions) = &search_state.suggestions
+            {
+                let suggestion = suggestions
+                    .iter()
+                    .find(|s| s.starts_with(search_state.query.as_str()))
+                    .map(|s| s.to_string());
+                if let Some(s) = suggestion {
+                    search_state.query = s;
+                }
+            }
+        }
         KeyCode::Char(c) => {
             if state.ui_state.list_state.selected().is_none() {
                 state
@@ -210,6 +223,7 @@ fn load_suggestions(path: &Path) -> Option<Vec<String>> {
     list.extend(list_names(path).unwrap_or_default());
     list.extend(list_origins(path).unwrap_or_default());
     list.extend(list_varieties(path).unwrap_or_default());
+    list.extend(list_processes(path).unwrap_or_default());
     list.extend(list_roasters(path).unwrap_or_default());
     list.extend(list_decaffeination_processes(path).unwrap_or_default());
     if list.is_empty() { None } else { Some(list) }
