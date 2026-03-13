@@ -343,7 +343,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             state.ui_state.mode = Mode::Update;
                         }
                     }
-                    KeyCode::Char('d') => {
+                    KeyCode::Char('d') | KeyCode::Backspace => {
                         if state.ui_state.list_state.selected().is_none() {
                             state.ui_state.error = Some("Select a coffee to delete it".to_string());
                         } else {
@@ -464,10 +464,12 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                         }
                     }
                     KeyCode::Backspace => {
-                        //should this not be delete action if selected and this
-                        //only if non select? review
-                        pop_optional_char(&mut state.ui_state.query);
                         state.ui_state.error = None;
+                        if state.ui_state.list_state.selected().is_some() {
+                            state.ui_state.mode = Mode::Delete;
+                        } else {
+                            pop_optional_char(&mut state.ui_state.query);
+                        }
                     }
                     _ => (),
                 },
@@ -599,7 +601,11 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                                 state.coffees =
                                     list_coffees(&path).expect("could not list coffees");
                                 state.ui_state.list_state = ListState::default();
-                                state.ui_state.mode = Mode::Normal;
+                                if state.ui_state.query.is_some() {
+                                    state.ui_state.mode = Mode::Search;
+                                } else {
+                                    state.ui_state.mode = Mode::Normal;
+                                }
                             }
                             Err(e) => state.ui_state.error = Some(e.message),
                         }
