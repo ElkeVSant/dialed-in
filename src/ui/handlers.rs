@@ -5,7 +5,7 @@ use ratatui::crossterm::event::{KeyCode, KeyEvent};
 use crate::app::{add_coffee, delete_coffee, list_coffees, update_coffee};
 use crate::ui::draft::{
     DraftCoffee, accept_suggestion, convert_coffee_to_draft, convert_draft_to_coffee,
-    get_match_input, pop_optional_char, update_draft_coffee,
+    get_match_input, update_draft_coffee,
 };
 use crate::ui::query::query_coffees;
 use crate::ui::{InputFocus, InputModalState, ListState, Mode, State};
@@ -84,7 +84,7 @@ pub fn handle_normal_mode_events(state: &mut State, key: &KeyEvent) -> bool {
 pub fn handle_search_mode_events(state: &mut State, key: &KeyEvent) {
     match key.code {
         KeyCode::Esc => {
-            state.ui_state.query = None;
+            state.ui_state.search_state = None;
             state.ui_state.mode = Mode::Normal;
         }
         KeyCode::Tab | KeyCode::Down => {
@@ -97,7 +97,12 @@ pub fn handle_search_mode_events(state: &mut State, key: &KeyEvent) {
         }
         KeyCode::Char(c) => {
             if state.ui_state.list_state.selected().is_none() {
-                state.ui_state.query.get_or_insert_with(String::new).push(c);
+                state
+                    .ui_state
+                    .search_state
+                    .get_or_insert_default()
+                    .query
+                    .push(c);
                 state.ui_state.error = None;
             } else {
                 match c {
@@ -112,7 +117,14 @@ pub fn handle_search_mode_events(state: &mut State, key: &KeyEvent) {
                         state.ui_state.error = None;
                     }
                     'e' | 'u' | ' ' => {
-                        match query_coffees(&state.coffees, state.ui_state.query.as_deref()) {
+                        match query_coffees(
+                            &state.coffees,
+                            state
+                                .ui_state
+                                .search_state
+                                .as_ref()
+                                .map(|s| s.query.as_str()),
+                        ) {
                             Ok(list) => {
                                 state.ui_state.input_state = Some(InputModalState {
                                     coffee: Some(convert_coffee_to_draft(
@@ -140,8 +152,8 @@ pub fn handle_search_mode_events(state: &mut State, key: &KeyEvent) {
             state.ui_state.error = None;
             if state.ui_state.list_state.selected().is_some() {
                 state.ui_state.mode = Mode::Delete;
-            } else {
-                pop_optional_char(&mut state.ui_state.query);
+            } else if let Some(search_state) = &mut state.ui_state.search_state {
+                search_state.query.pop();
             }
         }
         _ => (),
@@ -150,7 +162,14 @@ pub fn handle_search_mode_events(state: &mut State, key: &KeyEvent) {
 
 fn select_next_search(state: &mut State) {
     if let Some(index) = state.ui_state.list_state.selected() {
-        match query_coffees(&state.coffees, state.ui_state.query.as_deref()) {
+        match query_coffees(
+            &state.coffees,
+            state
+                .ui_state
+                .search_state
+                .as_ref()
+                .map(|s| s.query.as_str()),
+        ) {
             Ok(list) => {
                 if index == list.len() - 1 {
                     state.ui_state.list_state.select(None);
@@ -276,7 +295,14 @@ pub fn handle_input_modes_events(state: &mut State, key: &KeyEvent, path: &Path)
 
 pub fn handle_delete_mode_events(state: &mut State, key: &KeyEvent, path: &Path) -> bool {
     match key.code {
-        KeyCode::Enter => match query_coffees(&state.coffees, state.ui_state.query.as_deref()) {
+        KeyCode::Enter => match query_coffees(
+            &state.coffees,
+            state
+                .ui_state
+                .search_state
+                .as_ref()
+                .map(|s| s.query.as_str()),
+        ) {
             Ok(list) => {
                 delete_coffee(
                     list[state
@@ -307,7 +333,7 @@ pub fn handle_delete_mode_events(state: &mut State, key: &KeyEvent, path: &Path)
 }
 
 fn restore_mode(state: &mut State) {
-    if state.ui_state.query.is_some() {
+    if state.ui_state.search_state.is_some() {
         state.ui_state.mode = Mode::Search;
     } else {
         state.ui_state.mode = Mode::Normal;

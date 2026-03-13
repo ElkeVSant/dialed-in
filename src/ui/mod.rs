@@ -41,8 +41,8 @@ struct UiState {
     mode: Mode,
     input_state: Option<InputModalState>,
     list_state: ListState,
+    search_state: Option<SearchState>,
     show_grind_size: bool,
-    query: Option<String>,
     error: Option<String>,
 }
 
@@ -86,6 +86,12 @@ enum InputFocus {
     AftertasteStrength,
     AftertastePersonal,
     Notes,
+}
+
+#[derive(Default)]
+struct SearchState {
+    query: String,
+    suggestions: Option<Vec<String>>,
 }
 
 impl InputFocus {
@@ -218,7 +224,14 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
 
             render_app_name(frame, areas[0]);
 
-            let list = match query_coffees(&state.coffees, state.ui_state.query.as_deref()) {
+            let list = match query_coffees(
+                &state.coffees,
+                state
+                    .ui_state
+                    .search_state
+                    .as_ref()
+                    .map(|s| s.query.as_str()),
+            ) {
                 Ok(list) => {
                     render_coffees(
                         &mut state.ui_state.list_state,
@@ -242,7 +255,12 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 if state.ui_state.mode == Mode::Search {
                     render_search_bar(
                         &state.ui_state.list_state.selected(),
-                        state.ui_state.query.as_deref().unwrap_or_default(),
+                        state
+                            .ui_state
+                            .search_state
+                            .as_ref()
+                            .map(|s| s.query.as_str())
+                            .unwrap_or_default(),
                         frame,
                         areas[1],
                     );
