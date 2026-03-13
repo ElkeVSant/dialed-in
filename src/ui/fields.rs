@@ -10,7 +10,7 @@ pub enum DraftField {
     Field(&'static str, InputFocus, DraftFieldAccessor, InputExtractor),
     ScoreField(&'static str, InputFocus, DraftScoreAccessor),
     Spacing,
-    Summary(&'static str, DraftFieldAccessor),
+    Summary(&'static str, DraftScoreAccessor),
 }
 
 pub fn build_coffee_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
@@ -228,7 +228,7 @@ pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
             DraftField::Spacing,
             DraftField::Summary(
                 "Rating",
-                Box::new(|c| calculate_score(&c.rating.unwrap()).unwrap().to_string()),
+                Box::new(|c| calculate_score(&c.rating.unwrap()).unwrap()),
             ),
         ])
     } else {

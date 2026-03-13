@@ -3,15 +3,15 @@ use ratatui::{
     layout::{Constraint, Direction, HorizontalAlignment, Layout, Margin, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, Clear, List, ListState, Paragraph, Wrap},
+    widgets::{Block, Clear, List, ListItem, ListState, Paragraph, Wrap},
 };
 
-use crate::coffee::Coffee;
 use crate::ui::fields::{
     DraftField, build_coffee_fields, build_notes_field, build_rating_fields, calculate_score,
 };
 use crate::ui::style::{ACIDITY, AFTERTASTE, AROMA, BODY, SWEETNESS};
 use crate::ui::{DraftCoffee, InputFocus};
+use crate::{coffee::Coffee, ui::style::get_colour_for_total_score};
 
 const DIALED_IN: &str = r#"
 8888888b. d8b        888             8888888888         
@@ -60,9 +60,13 @@ pub fn render_coffees(
             if let Some(rating) = coffee.rating
                 && let Some(score) = calculate_score(&rating)
             {
-                format!("☕ {}", score)
+                ListItem::new(format!("☕ {}", score)).style(
+                    Style::new()
+                        .bg(get_colour_for_total_score(score))
+                        .fg(Color::Black),
+                )
             } else {
-                "".to_string()
+                ListItem::new("".to_string())
             }
         });
         if show_grind_size {
@@ -78,7 +82,7 @@ pub fn render_coffees(
     let selected_style = Style::new().bg(Color::DarkGray);
     let coffee_list = List::new(names).highlight_style(selected_style);
     frame.render_stateful_widget(coffee_list, list_areas[0], state);
-    let rating_list = List::new(ratings).highlight_style(selected_style);
+    let rating_list = List::new(ratings);
     frame.render_stateful_widget(rating_list, list_areas[list_areas.len() - 1], state);
     if show_grind_size {
         let grind_size_list = List::new(grind_sizes).highlight_style(selected_style);
@@ -220,19 +224,26 @@ pub fn render_input_coffee_modal(
             }
             DraftField::Spacing => frame.render_widget(Paragraph::new("".to_string()), *area),
             DraftField::Summary(label, value_accessor) => {
-                let summary_areas = Layout::default()
-                    .direction(Direction::Horizontal)
-                    .constraints([
-                        Constraint::Length(label.len() as u16 + 2),
-                        Constraint::Min(0),
-                    ])
-                    .split(*area);
-                frame.render_widget(Paragraph::new(format!("{}: ", *label)), summary_areas[0]);
                 let value = coffee
                     .as_ref()
                     .map(value_accessor)
                     .unwrap_or_else(|| value_accessor(&DraftCoffee::default()));
-                frame.render_widget(Paragraph::new(value), summary_areas[1]);
+                let summary_areas = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints([
+                        Constraint::Length(label.len() as u16 + 2),
+                        Constraint::Length(if value < 10 { 1 } else { 2 } + 4),
+                        Constraint::Min(0),
+                    ])
+                    .split(*area);
+                frame.render_widget(Paragraph::new(format!("{}: ", *label)), summary_areas[0]);
+                let score_colour = get_colour_for_total_score(value);
+                frame.render_widget(
+                    Paragraph::new(format!("☕ {} ", value))
+                        .bg(score_colour)
+                        .fg(Color::Black),
+                    summary_areas[1],
+                );
             }
             _ => unreachable!(),
         });

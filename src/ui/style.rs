@@ -1,5 +1,23 @@
 use ratatui::style::Color;
 
+const TOTAL_SCORE: [Color; 15] = [
+    Color::Rgb(252, 246, 169),
+    Color::Rgb(250, 242, 150),
+    Color::Rgb(250, 238, 132),
+    Color::Rgb(250, 234, 115),
+    Color::Rgb(249, 228, 100),
+    Color::Rgb(248, 221, 86),
+    Color::Rgb(247, 214, 76),
+    Color::Rgb(247, 206, 70),
+    Color::Rgb(244, 200, 68),
+    Color::Rgb(243, 192, 66),
+    Color::Rgb(240, 183, 63),
+    Color::Rgb(238, 171, 59),
+    Color::Rgb(235, 156, 55),
+    Color::Rgb(232, 138, 51),
+    Color::Rgb(230, 122, 47),
+];
+
 pub const AROMA: ScoreColorScale = ScoreColorScale {
     lightest: Color::Rgb(212, 219, 252),
     light: Color::Rgb(200, 202, 255),
@@ -58,5 +76,27 @@ impl ScoreColorScale {
             5 => self.darkest,
             _ => Color::Reset,
         }
+    }
+}
+
+pub fn get_colour_for_total_score(total: u8) -> Color {
+    match total {
+        0..=5 => Color::White,
+        6 | 7 => TOTAL_SCORE[0],
+        8 | 9 => TOTAL_SCORE[1],
+        10 | 11 => TOTAL_SCORE[2],
+        12 | 13 => TOTAL_SCORE[3],
+        14 | 15 => TOTAL_SCORE[4],
+        16 => TOTAL_SCORE[5],
+        17 => TOTAL_SCORE[6],
+        18 => TOTAL_SCORE[7],
+        19 => TOTAL_SCORE[8],
+        20 => TOTAL_SCORE[9],
+        21 => TOTAL_SCORE[10],
+        22 => TOTAL_SCORE[11],
+        23 => TOTAL_SCORE[12],
+        24 => TOTAL_SCORE[13],
+        25 => TOTAL_SCORE[14],
+        _ => Color::Reset,
     }
 }
