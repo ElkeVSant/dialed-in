@@ -2,7 +2,10 @@ use std::path::Path;
 
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
 
-use crate::app::{add_coffee, delete_coffee, list_coffees, update_coffee};
+use crate::app::{
+    add_coffee, delete_coffee, list_coffees, list_decaffeination_processes, list_names,
+    list_origins, list_processes, list_roasters, list_varieties, update_coffee,
+};
 use crate::ui::draft::{
     DraftCoffee, accept_suggestion, convert_coffee_to_draft, convert_draft_to_coffee,
     get_match_input, update_draft_coffee,
@@ -81,7 +84,7 @@ pub fn handle_normal_mode_events(state: &mut State, key: &KeyEvent) -> bool {
     }
 }
 
-pub fn handle_search_mode_events(state: &mut State, key: &KeyEvent) {
+pub fn handle_search_mode_events(state: &mut State, key: &KeyEvent, path: &Path) {
     match key.code {
         KeyCode::Esc => {
             state.ui_state.search_state = None;
@@ -103,6 +106,11 @@ pub fn handle_search_mode_events(state: &mut State, key: &KeyEvent) {
                     .get_or_insert_default()
                     .query
                     .push(c);
+                state
+                    .ui_state
+                    .search_state
+                    .get_or_insert_default()
+                    .suggestions = load_suggestions(path);
                 state.ui_state.error = None;
             } else {
                 match c {
@@ -154,6 +162,7 @@ pub fn handle_search_mode_events(state: &mut State, key: &KeyEvent) {
                 state.ui_state.mode = Mode::Delete;
             } else if let Some(search_state) = &mut state.ui_state.search_state {
                 search_state.query.pop();
+                search_state.suggestions = load_suggestions(path);
             }
         }
         _ => (),
@@ -194,6 +203,16 @@ fn select_previous_search(state: &mut State) {
     } else {
         state.ui_state.list_state.select_last();
     }
+}
+
+fn load_suggestions(path: &Path) -> Option<Vec<String>> {
+    let mut list = Vec::new();
+    list.extend(list_names(path).unwrap_or_default());
+    list.extend(list_origins(path).unwrap_or_default());
+    list.extend(list_varieties(path).unwrap_or_default());
+    list.extend(list_roasters(path).unwrap_or_default());
+    list.extend(list_decaffeination_processes(path).unwrap_or_default());
+    if list.is_empty() { None } else { Some(list) }
 }
 
 pub fn handle_input_modes_events(state: &mut State, key: &KeyEvent, path: &Path) {

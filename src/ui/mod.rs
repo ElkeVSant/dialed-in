@@ -253,6 +253,19 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                     render_error(message, frame, areas[areas.len() - 1]);
                 }
                 if state.ui_state.mode == Mode::Search {
+                    let suggestion = {
+                        if let Some(search_state) = &state.ui_state.search_state
+                            && let Some(suggestions) = &search_state.suggestions
+                            && !search_state.query.is_empty()
+                        {
+                            suggestions
+                                .iter()
+                                .find(|s| s.starts_with(search_state.query.as_str()))
+                                .map(|s| s.to_string())
+                        } else {
+                            None
+                        }
+                    };
                     render_search_bar(
                         &state.ui_state.list_state.selected(),
                         state
@@ -261,6 +274,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                             .as_ref()
                             .map(|s| s.query.as_str())
                             .unwrap_or_default(),
+                        &suggestion,
                         frame,
                         areas[1],
                     );
@@ -313,7 +327,7 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                         break Ok(());
                     }
                 }
-                Mode::Search => handle_search_mode_events(&mut state, &key),
+                Mode::Search => handle_search_mode_events(&mut state, &key, &path),
                 Mode::Add | Mode::Update => handle_input_modes_events(&mut state, &key, &path),
                 Mode::Delete => {
                     if !handle_delete_mode_events(&mut state, &key, &path) {

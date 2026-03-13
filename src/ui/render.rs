@@ -389,13 +389,31 @@ pub fn render_error(error: &str, frame: &mut Frame, area: Rect) {
     );
 }
 
-pub fn render_search_bar(selection: &Option<usize>, query: &str, frame: &mut Frame, area: Rect) {
+pub fn render_search_bar(
+    selection: &Option<usize>,
+    query: &str,
+    suggestion: &Option<String>,
+    frame: &mut Frame,
+    area: Rect,
+) {
     let bar = Block::bordered().title("Search");
     let inner_search_area = bar.inner(area);
     frame.render_widget(Clear, area);
     frame.render_widget(bar, area);
     if selection.is_none() {
-        frame.render_widget(Paragraph::new(format!("{}|", query)), inner_search_area);
+        let suggestion_span = {
+            if let Some(s) = suggestion {
+                let display_suggestion = &s[query.len()..];
+                Span::raw(display_suggestion).fg(Color::DarkGray)
+            } else {
+                Span::raw("")
+            }
+        };
+        let line = Line::from(vec![
+            Span::raw(format!("{}|", query)).fg(Color::White),
+            suggestion_span,
+        ]);
+        frame.render_widget(line, inner_search_area);
     } else {
         frame.render_widget(Paragraph::new(query), inner_search_area);
     }

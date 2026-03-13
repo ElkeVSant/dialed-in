@@ -44,6 +44,10 @@ pub fn list_coffees(path: &Path) -> Result<Vec<Coffee>, Box<dyn std::error::Erro
     Ok(coffees)
 }
 
+pub fn list_names(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    list_string_fields(path, |c| Some(c.name.clone()))
+}
+
 pub fn list_origins(path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     list_string_fields(path, |c| c.origin.clone())
 }
