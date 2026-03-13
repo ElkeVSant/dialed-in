@@ -9,7 +9,10 @@ impl Query {
     pub fn parse(query: &str) -> Result<Query, ParsingError> {
         let mut query = query.to_owned();
         let mut query_filters = Vec::new();
-        while query.contains(".") && query.contains(":") {
+        while query.contains(".")
+            && query.contains(":")
+            && query.find(".").unwrap() < query.find(":").unwrap()
+        {
             if query.contains(" ") {
                 let parts: Vec<&str> = query.splitn(2, " ").collect();
                 query_filters.push(parts[0].to_string());
