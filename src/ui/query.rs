@@ -30,6 +30,12 @@ impl Query {
                 .split_once(":")
                 .expect("split_once(':') failed despite contains(':') check");
 
+            if rc.len() != 4 {
+                return Err(ParsingError {
+                    message: "invalid rating characteristic filter".to_string(),
+                });
+            }
+
             if condition.is_empty() {
                 return Err(ParsingError {
                     message: "invalid filter value; values 0-5 are possible".to_string(),
