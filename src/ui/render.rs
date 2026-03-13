@@ -10,6 +10,7 @@ use crate::coffee::Coffee;
 use crate::ui::fields::{
     DraftField, build_coffee_fields, build_notes_field, build_rating_fields, calculate_score,
 };
+use crate::ui::style::{ACIDITY, AFTERTASTE, AROMA, BODY, SWEETNESS};
 use crate::ui::{DraftCoffee, InputFocus};
 
 const DIALED_IN: &str = r#"
@@ -271,51 +272,13 @@ pub fn render_input_coffee_modal(
 
 fn determine_colour(focus: &InputFocus, score: u8) -> Color {
     match focus {
-        InputFocus::AromaStrength | InputFocus::AromaPersonal => match score {
-            0 => Color::default(),
-            1 => Color::Rgb(212, 219, 252),
-            2 => Color::Rgb(200, 202, 255),
-            3 => Color::Rgb(190, 180, 252),
-            4 => Color::Rgb(172, 163, 228),
-            5 => Color::Rgb(151, 143, 203),
-            _ => unreachable!(),
-        },
-        InputFocus::SweetnessStrength | InputFocus::SweetnessPersonal => match score {
-            0 => Color::default(),
-            1 => Color::Rgb(249, 249, 250),
-            2 => Color::Rgb(249, 235, 238),
-            3 => Color::Rgb(245, 223, 229),
-            4 => Color::Rgb(240, 209, 219),
-            5 => Color::Rgb(234, 195, 209),
-            _ => unreachable!(),
-        },
-        InputFocus::AcidityStrength | InputFocus::AcidityPersonal => match score {
-            0 => Color::default(),
-            1 => Color::Rgb(246, 248, 236),
-            2 => Color::Rgb(230, 239, 214),
-            3 => Color::Rgb(200, 219, 168),
-            4 => Color::Rgb(181, 209, 145),
-            5 => Color::Rgb(163, 199, 125),
-            _ => unreachable!(),
-        },
-        InputFocus::BodyStrength | InputFocus::BodyPersonal => match score {
-            0 => Color::default(),
-            1 => Color::Rgb(244, 249, 249),
-            2 => Color::Rgb(225, 240, 241),
-            3 => Color::Rgb(210, 232, 233),
-            4 => Color::Rgb(189, 221, 225),
-            5 => Color::Rgb(168, 211, 217),
-            _ => unreachable!(),
-        },
-        InputFocus::AftertasteStrength | InputFocus::AftertastePersonal => match score {
-            0 => Color::default(),
-            1 => Color::Rgb(254, 247, 242),
-            2 => Color::Rgb(251, 236, 224),
-            3 => Color::Rgb(247, 224, 208),
-            4 => Color::Rgb(242, 211, 193),
-            5 => Color::Rgb(238, 200, 179),
-            _ => unreachable!(),
-        },
+        InputFocus::AromaStrength | InputFocus::AromaPersonal => AROMA.for_score(score),
+        InputFocus::SweetnessStrength | InputFocus::SweetnessPersonal => SWEETNESS.for_score(score),
+        InputFocus::AcidityStrength | InputFocus::AcidityPersonal => ACIDITY.for_score(score),
+        InputFocus::BodyStrength | InputFocus::BodyPersonal => BODY.for_score(score),
+        InputFocus::AftertasteStrength | InputFocus::AftertastePersonal => {
+            AFTERTASTE.for_score(score)
+        }
         _ => Color::default(),
     }
 }

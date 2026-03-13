@@ -3,6 +3,7 @@ mod fields;
 mod handlers;
 mod query;
 mod render;
+mod style;
 
 use std::path::Path;
 
