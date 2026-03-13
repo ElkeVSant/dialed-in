@@ -23,11 +23,11 @@ const DIALED_IN: &str = r#"
 888  .d88P888888  888888Y8b.    Y88b 888  888  888  888 
 8888888P" 888"Y888888888 "Y8888  "Y888888888888888  888 "#;
 
-pub fn render_app_name(frame: &mut Frame, area: Rect) {
+pub(super) fn render_app_name(frame: &mut Frame, area: Rect) {
     frame.render_widget(Paragraph::new(DIALED_IN), area);
 }
 
-pub fn render_coffees(
+pub(super) fn render_coffees(
     state: &mut ListState,
     show_grind_size: bool,
     coffees: &[&Coffee],
@@ -90,7 +90,7 @@ pub fn render_coffees(
     }
 }
 
-pub fn render_input_coffee_modal(
+pub(super) fn render_input_coffee_modal(
     focus: &InputFocus,
     suggestion: &Option<String>,
     coffee: &Option<DraftCoffee>,
@@ -302,7 +302,7 @@ fn format_score(score: u8) -> String {
     )
 }
 
-pub fn render_delete_coffee_modal(coffee: &Coffee, frame: &mut Frame, area: Rect) {
+pub(super) fn render_delete_coffee_modal(coffee: &Coffee, frame: &mut Frame, area: Rect) {
     let modal_area = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
@@ -371,7 +371,7 @@ pub fn render_delete_coffee_modal(coffee: &Coffee, frame: &mut Frame, area: Rect
         .for_each(|(value, area)| frame.render_widget(Paragraph::new(value.as_str()), *area));
 }
 
-pub fn render_error(error: &str, frame: &mut Frame, area: Rect) {
+pub(super) fn render_error(error: &str, frame: &mut Frame, area: Rect) {
     let error_area = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Min(0), Constraint::Length(error.len() as u16)])
@@ -389,7 +389,7 @@ pub fn render_error(error: &str, frame: &mut Frame, area: Rect) {
     );
 }
 
-pub fn render_search_bar(
+pub(super) fn render_search_bar(
     selection: &Option<usize>,
     query: &str,
     suggestion: &Option<String>,

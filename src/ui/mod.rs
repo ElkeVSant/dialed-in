@@ -189,7 +189,7 @@ impl InputFocus {
     }
 }
 
-pub fn run() -> Result<(), Box<dyn std::error::Error>> {
+pub(super) fn run() -> Result<(), Box<dyn std::error::Error>> {
     ratatui::run(app)?;
     Ok(())
 }

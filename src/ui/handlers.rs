@@ -13,7 +13,7 @@ use crate::ui::draft::{
 use crate::ui::query::query_coffees;
 use crate::ui::{InputFocus, InputModalState, ListState, Mode, State};
 
-pub fn handle_normal_mode_events(state: &mut State, key: &KeyEvent) -> bool {
+pub(super) fn handle_normal_mode_events(state: &mut State, key: &KeyEvent) -> bool {
     match key.code {
         KeyCode::Char('q') | KeyCode::Esc => false,
         KeyCode::Tab | KeyCode::Down | KeyCode::Char('j') => {
@@ -84,7 +84,7 @@ pub fn handle_normal_mode_events(state: &mut State, key: &KeyEvent) -> bool {
     }
 }
 
-pub fn handle_search_mode_events(state: &mut State, key: &KeyEvent, path: &Path) {
+pub(super) fn handle_search_mode_events(state: &mut State, key: &KeyEvent, path: &Path) {
     match key.code {
         KeyCode::Esc => {
             state.ui_state.search_state = None;
@@ -229,7 +229,7 @@ fn load_suggestions(path: &Path) -> Option<Vec<String>> {
     if list.is_empty() { None } else { Some(list) }
 }
 
-pub fn handle_input_modes_events(state: &mut State, key: &KeyEvent, path: &Path) {
+pub(super) fn handle_input_modes_events(state: &mut State, key: &KeyEvent, path: &Path) {
     let mode_state = state
         .ui_state
         .input_state
@@ -326,7 +326,7 @@ pub fn handle_input_modes_events(state: &mut State, key: &KeyEvent, path: &Path)
     }
 }
 
-pub fn handle_delete_mode_events(state: &mut State, key: &KeyEvent, path: &Path) -> bool {
+pub(super) fn handle_delete_mode_events(state: &mut State, key: &KeyEvent, path: &Path) -> bool {
     match key.code {
         KeyCode::Enter => match query_coffees(
             &state.coffees,

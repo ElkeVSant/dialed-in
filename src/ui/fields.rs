@@ -5,7 +5,7 @@ type DraftFieldAccessor = Box<dyn Fn(&DraftCoffee) -> String>;
 type DraftScoreAccessor = Box<dyn Fn(&DraftCoffee) -> u8>;
 type InputExtractor = Option<Box<dyn Fn(&str) -> String>>;
 
-pub enum DraftField {
+pub(super) enum DraftField {
     Header(&'static str),
     Field(&'static str, InputFocus, DraftFieldAccessor, InputExtractor),
     ScoreField(&'static str, InputFocus, DraftScoreAccessor),
@@ -13,7 +13,7 @@ pub enum DraftField {
     Summary(&'static str, DraftScoreAccessor),
 }
 
-pub fn build_coffee_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
+pub(super) fn build_coffee_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     let mut fields: Vec<DraftField> = vec![
         DraftField::Field(
             "Name",
@@ -102,7 +102,7 @@ pub fn build_coffee_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     fields
 }
 
-pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
+pub(super) fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     let mut fields = vec![
         DraftField::Header("Aroma"),
         DraftField::ScoreField(
@@ -237,7 +237,7 @@ pub fn build_rating_fields(draft: &Option<DraftCoffee>) -> Vec<DraftField> {
     fields
 }
 
-pub fn build_notes_field() -> DraftField {
+pub(super) fn build_notes_field() -> DraftField {
     DraftField::Field(
         "Notes",
         InputFocus::Notes,
@@ -246,7 +246,7 @@ pub fn build_notes_field() -> DraftField {
     )
 }
 
-pub fn calculate_score(rating: &Rating) -> Option<u8> {
+pub(super) fn calculate_score(rating: &Rating) -> Option<u8> {
     let scores = [
         rating.aroma.as_ref().and_then(|a| a.personal),
         rating.sweetness.as_ref().and_then(|s| s.personal),

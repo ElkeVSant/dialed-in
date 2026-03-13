@@ -18,7 +18,7 @@ const TOTAL_SCORE: [Color; 15] = [
     Color::Rgb(230, 122, 47),
 ];
 
-pub const AROMA: ScoreColorScale = ScoreColorScale {
+pub(super) const AROMA: ScoreColorScale = ScoreColorScale {
     lightest: Color::Rgb(212, 219, 252),
     light: Color::Rgb(200, 202, 255),
     medium: Color::Rgb(190, 180, 252),
@@ -26,7 +26,7 @@ pub const AROMA: ScoreColorScale = ScoreColorScale {
     darkest: Color::Rgb(151, 143, 203),
 };
 
-pub const SWEETNESS: ScoreColorScale = ScoreColorScale {
+pub(super) const SWEETNESS: ScoreColorScale = ScoreColorScale {
     lightest: Color::Rgb(249, 249, 250),
     light: Color::Rgb(249, 235, 238),
     medium: Color::Rgb(245, 223, 229),
@@ -34,7 +34,7 @@ pub const SWEETNESS: ScoreColorScale = ScoreColorScale {
     darkest: Color::Rgb(234, 195, 209),
 };
 
-pub const ACIDITY: ScoreColorScale = ScoreColorScale {
+pub(super) const ACIDITY: ScoreColorScale = ScoreColorScale {
     lightest: Color::Rgb(246, 248, 236),
     light: Color::Rgb(230, 239, 214),
     medium: Color::Rgb(200, 219, 168),
@@ -42,7 +42,7 @@ pub const ACIDITY: ScoreColorScale = ScoreColorScale {
     darkest: Color::Rgb(163, 199, 125),
 };
 
-pub const BODY: ScoreColorScale = ScoreColorScale {
+pub(super) const BODY: ScoreColorScale = ScoreColorScale {
     lightest: Color::Rgb(244, 249, 249),
     light: Color::Rgb(225, 240, 241),
     medium: Color::Rgb(210, 232, 233),
@@ -50,7 +50,7 @@ pub const BODY: ScoreColorScale = ScoreColorScale {
     darkest: Color::Rgb(168, 211, 217),
 };
 
-pub const AFTERTASTE: ScoreColorScale = ScoreColorScale {
+pub(super) const AFTERTASTE: ScoreColorScale = ScoreColorScale {
     lightest: Color::Rgb(254, 247, 242),
     light: Color::Rgb(251, 236, 224),
     medium: Color::Rgb(247, 224, 208),
@@ -58,7 +58,7 @@ pub const AFTERTASTE: ScoreColorScale = ScoreColorScale {
     darkest: Color::Rgb(238, 200, 179),
 };
 
-pub struct ScoreColorScale {
+pub(super) struct ScoreColorScale {
     lightest: Color,
     light: Color,
     medium: Color,
@@ -67,7 +67,7 @@ pub struct ScoreColorScale {
 }
 
 impl ScoreColorScale {
-    pub fn for_score(&self, score: u8) -> Color {
+    pub(super) fn for_score(&self, score: u8) -> Color {
         match score {
             1 => self.lightest,
             2 => self.light,
@@ -79,7 +79,7 @@ impl ScoreColorScale {
     }
 }
 
-pub fn get_colour_for_total_score(total: u8) -> Color {
+pub(super) fn get_colour_for_total_score(total: u8) -> Color {
     match total {
         0..=5 => Color::White,
         6 | 7 => TOTAL_SCORE[0],

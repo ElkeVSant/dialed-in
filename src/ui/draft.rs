@@ -5,45 +5,45 @@ use crate::coffee::{BrewSettings, Coffee, GrindAdjustment, Rating, Score};
 use crate::ui::InputFocus;
 
 #[derive(Default)]
-pub struct DraftCoffee {
-    pub id: Option<Uuid>,
-    pub name: Option<String>,
-    pub origin: Option<String>,
-    pub varieties: Option<String>,
-    pub process: Option<String>,
-    pub decaf: Option<bool>,
-    pub decaffeination_process: Option<String>,
-    pub roaster: Option<String>,
-    pub brew_settings: Option<DraftBrewSettings>,
-    pub rating: Option<Rating>,
-    pub notes: Option<String>,
+pub(super) struct DraftCoffee {
+    pub(super) id: Option<Uuid>,
+    pub(super) name: Option<String>,
+    pub(super) origin: Option<String>,
+    pub(super) varieties: Option<String>,
+    pub(super) process: Option<String>,
+    pub(super) decaf: Option<bool>,
+    pub(super) decaffeination_process: Option<String>,
+    pub(super) roaster: Option<String>,
+    pub(super) brew_settings: Option<DraftBrewSettings>,
+    pub(super) rating: Option<Rating>,
+    pub(super) notes: Option<String>,
 }
 
 #[derive(Default)]
-pub struct DraftBrewSettings {
-    pub grind_size: Option<String>,
-    pub grind_size_adjustment: Option<GrindAdjustment>,
+pub(super) struct DraftBrewSettings {
+    pub(super) grind_size: Option<String>,
+    pub(super) grind_size_adjustment: Option<GrindAdjustment>,
 }
 
 impl DraftCoffee {
-    pub fn toggle_decaf(&mut self) {
+    pub(super) fn toggle_decaf(&mut self) {
         self.decaf = Some(!self.decaf.unwrap_or_default());
     }
-    pub fn grind_coarser(&mut self) {
+    pub(super) fn grind_coarser(&mut self) {
         let bs = self.brew_settings.as_mut().expect("no brew settings exist");
         bs.grind_size_adjustment = match bs.grind_size_adjustment {
             Some(gsa) => gsa.coarser(),
             None => Some(GrindAdjustment::Coarser),
         };
     }
-    pub fn grind_finer(&mut self) {
+    pub(super) fn grind_finer(&mut self) {
         let bs = self.brew_settings.as_mut().expect("no brew settings exist");
         bs.grind_size_adjustment = match bs.grind_size_adjustment {
             Some(gsa) => gsa.finer(),
             None => Some(GrindAdjustment::Finer),
         };
     }
-    pub fn reset_grind_adjustment(&mut self) {
+    pub(super) fn reset_grind_adjustment(&mut self) {
         self.brew_settings
             .as_mut()
             .expect("no brew settings exist")
@@ -51,7 +51,11 @@ impl DraftCoffee {
     }
 }
 
-pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &InputFocus, keycode: KeyCode) {
+pub(super) fn update_draft_coffee(
+    coffee: &mut Option<DraftCoffee>,
+    focus: &InputFocus,
+    keycode: KeyCode,
+) {
     let coffee = coffee.get_or_insert_with(DraftCoffee::default);
     match keycode {
         KeyCode::Char(c) => match focus {
@@ -232,7 +236,7 @@ pub fn update_draft_coffee(coffee: &mut Option<DraftCoffee>, focus: &InputFocus,
     }
 }
 
-pub fn pop_optional_char(field: &mut Option<String>) {
+pub(super) fn pop_optional_char(field: &mut Option<String>) {
     if field.is_some() {
         if field.as_ref().unwrap().len() == 1 {
             *field = None;
@@ -242,7 +246,7 @@ pub fn pop_optional_char(field: &mut Option<String>) {
     }
 }
 
-pub fn accept_suggestion(coffee: &mut DraftCoffee, focus: &InputFocus, suggestion: String) {
+pub(super) fn accept_suggestion(coffee: &mut DraftCoffee, focus: &InputFocus, suggestion: String) {
     match focus {
         InputFocus::Origin => coffee.origin = Some(suggestion),
         InputFocus::Varieties => {
@@ -272,7 +276,9 @@ fn set_score(score: &mut Option<u8>, value: char) {
     }
 }
 
-pub fn convert_draft_to_coffee(draft: &DraftCoffee) -> Result<Coffee, Box<dyn std::error::Error>> {
+pub(super) fn convert_draft_to_coffee(
+    draft: &DraftCoffee,
+) -> Result<Coffee, Box<dyn std::error::Error>> {
     Ok(Coffee {
         id: draft.id.unwrap_or_default(),
         name: draft.name.clone().ok_or("name is required")?,
@@ -312,7 +318,7 @@ pub fn convert_draft_to_coffee(draft: &DraftCoffee) -> Result<Coffee, Box<dyn st
     })
 }
 
-pub fn convert_coffee_to_draft(coffee: &Coffee) -> DraftCoffee {
+pub(super) fn convert_coffee_to_draft(coffee: &Coffee) -> DraftCoffee {
     DraftCoffee {
         id: Some(coffee.id),
         name: Some(coffee.name.clone()),
@@ -332,7 +338,7 @@ pub fn convert_coffee_to_draft(coffee: &Coffee) -> DraftCoffee {
 }
 
 // supports only the characteristics with suggestions
-pub fn get_match_input(focus: &InputFocus, coffee: &DraftCoffee) -> Option<String> {
+pub(super) fn get_match_input(focus: &InputFocus, coffee: &DraftCoffee) -> Option<String> {
     match focus {
         InputFocus::Origin => coffee.origin.clone(),
         InputFocus::Varieties => {

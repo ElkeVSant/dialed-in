@@ -1,12 +1,12 @@
 use crate::coffee::Coffee;
 
-pub struct Query {
+pub(super) struct Query {
     search: Option<String>,
     filters: Vec<RatingFilter>,
 }
 
 impl Query {
-    pub fn parse(query: &str) -> Result<Query, ParsingError> {
+    pub(super) fn parse(query: &str) -> Result<Query, ParsingError> {
         let mut query = query.to_owned();
         let mut query_filters = Vec::new();
         while query.contains(".")
@@ -119,7 +119,7 @@ impl RatingCharacteristic {
         }
     }
 
-    pub fn from_string(rc_string: &str) -> Result<RatingCharacteristic, ParsingError> {
+    pub(super) fn from_string(rc_string: &str) -> Result<RatingCharacteristic, ParsingError> {
         let (r, c) = rc_string
             .split_once(".")
             .expect("split_once('.') failed despite contains('.') check");
@@ -173,11 +173,11 @@ impl RatingCharacteristic {
 }
 
 #[derive(Debug)]
-pub struct ParsingError {
-    pub message: String,
+pub(super) struct ParsingError {
+    pub(super) message: String,
 }
 
-pub fn filter_coffees(list: &[Coffee], query: Query) -> Vec<&Coffee> {
+pub(super) fn filter_coffees(list: &[Coffee], query: Query) -> Vec<&Coffee> {
     let mut filtered_list = list.iter().collect();
     if let Some(search_query) = query.search {
         filtered_list = search_coffees(list, &search_query)
@@ -233,7 +233,7 @@ fn search_coffees<'a>(list: &'a [Coffee], query: &str) -> Vec<&'a Coffee> {
         .collect()
 }
 
-pub fn query_coffees<'a>(
+pub(super) fn query_coffees<'a>(
     coffees: &'a [Coffee],
     query: Option<&str>,
 ) -> Result<Vec<&'a Coffee>, ParsingError> {
