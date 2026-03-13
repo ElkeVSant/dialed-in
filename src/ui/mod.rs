@@ -1,5 +1,6 @@
 mod draft;
 mod fields;
+mod handlers;
 mod query;
 mod render;
 
@@ -7,28 +8,26 @@ use std::path::Path;
 
 use ratatui::{
     DefaultTerminal,
-    crossterm::event::{Event, KeyCode, read},
+    crossterm::event::{Event, read},
     layout::{Constraint, Direction, Layout},
     widgets::ListState,
 };
 
-use crate::coffee::Coffee;
-use crate::ui::draft::{
-    DraftCoffee, convert_coffee_to_draft, convert_draft_to_coffee, get_match_input,
-    pop_optional_char, update_draft_coffee,
+use crate::app::{
+    list_coffees, list_decaffeination_processes, list_origins, list_processes, list_roasters,
+    list_varieties,
 };
+use crate::ui::handlers::{handle_delete_mode_events, handle_normal_mode_events};
 use crate::ui::query::query_coffees;
 use crate::ui::render::{
     render_app_name, render_coffees, render_delete_coffee_modal, render_error,
     render_input_coffee_modal, render_search_bar,
 };
-use crate::{
-    app::{
-        add_coffee, delete_coffee, list_coffees, list_decaffeination_processes, list_origins,
-        list_processes, list_roasters, list_varieties, update_coffee,
-    },
-    ui::draft::accept_suggestion,
+use crate::ui::{
+    draft::{DraftCoffee, get_match_input},
+    handlers::handle_input_modes_events,
 };
+use crate::{coffee::Coffee, ui::handlers::handle_search_mode_events};
 
 #[derive(Default)]
 struct State {
@@ -290,336 +289,18 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
 
         if let Event::Key(key) = read()? {
             match state.ui_state.mode {
-                Mode::Normal => match key.code {
-                    KeyCode::Char('q') => break Ok(()),
-                    KeyCode::Esc => break Ok(()),
-                    KeyCode::Tab | KeyCode::Down | KeyCode::Char('j') => {
-                        state.ui_state.error = None;
-                        if let Some(index) = state.ui_state.list_state.selected()
-                            && index == state.coffees.len() - 1
-                        {
-                            state.ui_state.list_state.select_first();
-                        } else {
-                            state.ui_state.list_state.select_next();
-                        }
-                    }
-                    KeyCode::BackTab | KeyCode::Up | KeyCode::Char('k') => {
-                        state.ui_state.error = None;
-                        if let Some(index) = state.ui_state.list_state.selected()
-                            && index == 0
-                        {
-                            state.ui_state.list_state.select_last();
-                        } else {
-                            state.ui_state.list_state.select_previous();
-                        }
-                    }
-                    KeyCode::Char('/') => {
-                        state.ui_state.list_state.select(None);
-                        state.ui_state.mode = Mode::Search;
-                    }
-                    KeyCode::Char('g') => {
-                        state.ui_state.show_grind_size = !state.ui_state.show_grind_size;
-                    }
-                    KeyCode::Char('a') => {
-                        state.ui_state.mode = Mode::Add;
-                        state.ui_state.input_state = Some(InputModalState::default());
-                        state.ui_state.error = None;
-                    }
-                    KeyCode::Char('e') | KeyCode::Char('u') | KeyCode::Char(' ') => {
-                        if state.ui_state.list_state.selected().is_none() {
-                            state.ui_state.error = Some("Select a coffee to update it".to_string());
-                        } else {
-                            state.ui_state.input_state = Some(InputModalState {
-                                coffee: Some(convert_coffee_to_draft(
-                                    &state.coffees[state
-                                        .ui_state
-                                        .list_state
-                                        .selected()
-                                        .expect("dropped all beans")],
-                                )),
-                                ..InputModalState::default()
-                            });
-                            state.ui_state.error = None;
-                            state.ui_state.mode = Mode::Update;
-                        }
-                    }
-                    KeyCode::Char('d') | KeyCode::Backspace => {
-                        if state.ui_state.list_state.selected().is_none() {
-                            state.ui_state.error = Some("Select a coffee to delete it".to_string());
-                        } else {
-                            state.ui_state.mode = Mode::Delete;
-                        }
-                    }
-                    _ => (),
-                },
-                Mode::Search => match key.code {
-                    KeyCode::Esc => {
-                        state.ui_state.query = None;
-                        state.ui_state.mode = Mode::Normal;
-                    }
-                    KeyCode::Tab | KeyCode::Down => {
-                        state.ui_state.error = None;
-                        if let Some(index) = state.ui_state.list_state.selected() {
-                            match query_coffees(&state.coffees, state.ui_state.query.as_deref()) {
-                                Ok(list) => {
-                                    if index == list.len() - 1 {
-                                        state.ui_state.list_state.select(None);
-                                    } else {
-                                        state.ui_state.list_state.select_next();
-                                    }
-                                }
-                                Err(e) => state.ui_state.error = Some(e.message),
-                            }
-                        } else {
-                            state.ui_state.list_state.select_first();
-                        }
-                    }
-                    KeyCode::BackTab | KeyCode::Up => {
-                        state.ui_state.error = None;
-                        if let Some(index) = state.ui_state.list_state.selected() {
-                            if index == 0 {
-                                state.ui_state.list_state.select(None);
-                            } else {
-                                state.ui_state.list_state.select_previous();
-                            }
-                        } else {
-                            state.ui_state.list_state.select_last();
-                        }
-                    }
-                    KeyCode::Char(c) => {
-                        if state.ui_state.list_state.selected().is_none() {
-                            state.ui_state.query.get_or_insert_with(String::new).push(c);
-                            state.ui_state.error = None;
-                        } else {
-                            match c {
-                                'j' => {
-                                    match query_coffees(
-                                        &state.coffees,
-                                        state.ui_state.query.as_deref(),
-                                    ) {
-                                        Ok(list) => {
-                                            if state
-                                                .ui_state
-                                                .list_state
-                                                .selected()
-                                                .expect("some selected but none here")
-                                                == list.len() - 1
-                                            {
-                                                state.ui_state.list_state.select(None);
-                                            } else {
-                                                state.ui_state.list_state.select_next();
-                                            }
-                                        }
-                                        Err(e) => state.ui_state.error = Some(e.message),
-                                    }
-                                }
-                                'k' => {
-                                    if state
-                                        .ui_state
-                                        .list_state
-                                        .selected()
-                                        .expect("some selected but none here")
-                                        == 0
-                                    {
-                                        state.ui_state.list_state.select(None);
-                                    } else {
-                                        state.ui_state.list_state.select_previous();
-                                    }
-                                }
-                                'g' => {
-                                    state.ui_state.show_grind_size =
-                                        !state.ui_state.show_grind_size;
-                                }
-                                'a' => {
-                                    state.ui_state.mode = Mode::Add;
-                                    state.ui_state.input_state = Some(InputModalState::default());
-                                    state.ui_state.error = None;
-                                }
-                                'e' | 'u' | ' ' => {
-                                    match query_coffees(
-                                        &state.coffees,
-                                        state.ui_state.query.as_deref(),
-                                    ) {
-                                        Ok(list) => {
-                                            state.ui_state.input_state = Some(InputModalState {
-                                                coffee: Some(convert_coffee_to_draft(
-                                                    list[state
-                                                        .ui_state
-                                                        .list_state
-                                                        .selected()
-                                                        .expect("dropped all beans")],
-                                                )),
-                                                ..InputModalState::default()
-                                            });
-                                            state.ui_state.error = None;
-                                            state.ui_state.mode = Mode::Update;
-                                        }
-                                        Err(e) => state.ui_state.error = Some(e.message),
-                                    }
-                                }
-                                'd' => state.ui_state.mode = Mode::Delete,
-
-                                _ => (),
-                            }
-                        }
-                    }
-                    KeyCode::Backspace => {
-                        state.ui_state.error = None;
-                        if state.ui_state.list_state.selected().is_some() {
-                            state.ui_state.mode = Mode::Delete;
-                        } else {
-                            pop_optional_char(&mut state.ui_state.query);
-                        }
-                    }
-                    _ => (),
-                },
-                Mode::Add | Mode::Update => {
-                    let mode_state = state
-                        .ui_state
-                        .input_state
-                        .as_mut()
-                        .expect("mode state missing in mode");
-                    match key.code {
-                        KeyCode::Tab | KeyCode::Down => {
-                            mode_state.focus = mode_state.focus.next(&mode_state.coffee);
-                            mode_state.suggestions = mode_state.focus.load_suggestions(&path);
-                        }
-                        KeyCode::BackTab | KeyCode::Up => {
-                            mode_state.focus = mode_state.focus.previous(&mode_state.coffee);
-                            mode_state.suggestions = mode_state.focus.load_suggestions(&path);
-                        }
-                        KeyCode::Left => mode_state.focus = InputFocus::Name,
-                        KeyCode::Right => mode_state.focus = InputFocus::AromaStrength,
-                        KeyCode::Enter => {
-                            let focus = mode_state.focus.clone();
-
-                            let mut suggestion: Option<String> = None;
-                            if let Some(suggestions) = mode_state.suggestions.as_ref()
-                                && let Some(coffee) = &mode_state.coffee
-                            {
-                                let potential_match = get_match_input(&mode_state.focus, coffee);
-                                if let Some(pm) = potential_match {
-                                    suggestion = suggestions
-                                        .iter()
-                                        .find(|s| s.starts_with(&pm))
-                                        .map(|s| s.to_string());
-                                }
-                            }
-
-                            if mode_state.focus == InputFocus::Decaf {
-                                mode_state
-                                    .coffee
-                                    .get_or_insert_with(DraftCoffee::default)
-                                    .toggle_decaf();
-                            } else if suggestion.is_some()
-                                && let Some(coffee) = mode_state.coffee.as_mut()
-                            {
-                                accept_suggestion(
-                                    coffee,
-                                    &focus,
-                                    suggestion.expect("suggestion disappeared"),
-                                );
-                            } else if let Some(draft) = &mode_state.coffee {
-                                match convert_draft_to_coffee(draft) {
-                                    Ok(coffee) => {
-                                        if state.ui_state.mode == Mode::Add {
-                                            add_coffee(coffee, &path)
-                                                .expect("cannot remember coffee");
-                                            state.ui_state.list_state = ListState::default();
-                                        } else {
-                                            update_coffee(coffee, &path)
-                                                .expect("cannot improve coffee");
-                                        }
-                                        state.ui_state.input_state = None;
-                                        state.coffees =
-                                            list_coffees(&path).expect("could not list coffees");
-                                        if state.ui_state.query.is_some() {
-                                            state.ui_state.mode = Mode::Search;
-                                        } else {
-                                            state.ui_state.mode = Mode::Normal;
-                                        }
-                                    }
-                                    Err(e) => state.ui_state.error = Some(e.to_string()),
-                                }
-                            }
-                        }
-                        KeyCode::Esc => {
-                            state.ui_state.input_state = None;
-                            state.ui_state.error = None;
-                            state.ui_state.mode = Mode::Normal;
-                        }
-                        KeyCode::Backspace | KeyCode::Char(_) => {
-                            if mode_state.focus == InputFocus::GrindSizeAdjustment {
-                                if key.code == KeyCode::Char('+') {
-                                    mode_state
-                                        .coffee
-                                        .as_mut()
-                                        .expect("no coffee to adjust")
-                                        .grind_coarser();
-                                } else if key.code == KeyCode::Char('-') {
-                                    mode_state
-                                        .coffee
-                                        .as_mut()
-                                        .expect("no coffee to adjust")
-                                        .grind_finer();
-                                } else if key.code == KeyCode::Backspace {
-                                    mode_state
-                                        .coffee
-                                        .as_mut()
-                                        .expect("no coffee to adjust")
-                                        .reset_grind_adjustment();
-                                }
-                            } else {
-                                update_draft_coffee(
-                                    &mut mode_state.coffee,
-                                    &mode_state.focus,
-                                    key.code,
-                                );
-                                if matches!(key.code, KeyCode::Char(_)) {
-                                    state.ui_state.error = None;
-                                }
-                            }
-                        }
-
-                        _ => (),
+                Mode::Normal => {
+                    if !handle_normal_mode_events(&mut state, &key) {
+                        break Ok(());
                     }
                 }
-                Mode::Delete => match key.code {
-                    KeyCode::Enter => {
-                        match query_coffees(&state.coffees, state.ui_state.query.as_deref()) {
-                            Ok(list) => {
-                                delete_coffee(
-                                    list[state
-                                        .ui_state
-                                        .list_state
-                                        .selected()
-                                        .expect("dropped all beans")]
-                                    .id,
-                                    &path,
-                                )
-                                .expect("cannot purge grinder");
-                                state.coffees =
-                                    list_coffees(&path).expect("could not list coffees");
-                                state.ui_state.list_state = ListState::default();
-                                if state.ui_state.query.is_some() {
-                                    state.ui_state.mode = Mode::Search;
-                                } else {
-                                    state.ui_state.mode = Mode::Normal;
-                                }
-                            }
-                            Err(e) => state.ui_state.error = Some(e.message),
-                        }
+                Mode::Search => handle_search_mode_events(&mut state, &key),
+                Mode::Add | Mode::Update => handle_input_modes_events(&mut state, &key, &path),
+                Mode::Delete => {
+                    if !handle_delete_mode_events(&mut state, &key, &path) {
+                        break Ok(());
                     }
-                    KeyCode::Esc => {
-                        if state.ui_state.query.is_some() {
-                            state.ui_state.mode = Mode::Search;
-                        } else {
-                            state.ui_state.mode = Mode::Normal;
-                        }
-                    }
-                    KeyCode::Char('q') => break Ok(()),
-                    _ => (),
-                },
+                }
             }
         }
     }
