@@ -13,7 +13,22 @@ use crate::ui::draft::{
 use crate::ui::query::query_coffees;
 use crate::ui::{InputFocus, InputModalState, ListState, Mode, State};
 
+fn handle_help_toggle(state: &mut State, key: &KeyEvent) -> bool {
+    if state.ui_state.show_help && key.code == KeyCode::Esc {
+        state.ui_state.show_help = false;
+        true
+    } else if key.code == KeyCode::Char('?') {
+        state.ui_state.show_help = !state.ui_state.show_help;
+        true
+    } else {
+        false
+    }
+}
+
 pub(super) fn handle_normal_mode_events(state: &mut State, key: &KeyEvent) -> bool {
+    if handle_help_toggle(state, key) {
+        return true;
+    }
     match key.code {
         KeyCode::Char('q') | KeyCode::Esc => false,
         KeyCode::Tab | KeyCode::Down | KeyCode::Char('j') => {
@@ -85,6 +100,9 @@ pub(super) fn handle_normal_mode_events(state: &mut State, key: &KeyEvent) -> bo
 }
 
 pub(super) fn handle_search_mode_events(state: &mut State, key: &KeyEvent, path: &Path) {
+    if handle_help_toggle(state, key) {
+        return;
+    }
     match key.code {
         KeyCode::Esc => {
             state.ui_state.search_state = None;
@@ -230,6 +248,9 @@ fn load_suggestions(path: &Path) -> Option<Vec<String>> {
 }
 
 pub(super) fn handle_input_modes_events(state: &mut State, key: &KeyEvent, path: &Path) {
+    if handle_help_toggle(state, key) {
+        return;
+    }
     let mode_state = state
         .ui_state
         .input_state
@@ -327,6 +348,9 @@ pub(super) fn handle_input_modes_events(state: &mut State, key: &KeyEvent, path:
 }
 
 pub(super) fn handle_delete_mode_events(state: &mut State, key: &KeyEvent, path: &Path) -> bool {
+    if handle_help_toggle(state, key) {
+        return true;
+    }
     match key.code {
         KeyCode::Enter => match query_coffees(
             &state.coffees,

@@ -21,7 +21,7 @@ use crate::app::{
 use crate::ui::handlers::{handle_delete_mode_events, handle_normal_mode_events};
 use crate::ui::query::query_coffees;
 use crate::ui::render::{
-    render_app_name, render_coffees, render_delete_coffee_modal, render_error,
+    render_app_name, render_coffees, render_delete_coffee_modal, render_error, render_help_panel,
     render_input_coffee_modal, render_search_bar,
 };
 use crate::ui::{
@@ -43,6 +43,7 @@ struct UiState {
     list_state: ListState,
     search_state: Option<SearchState>,
     show_grind_size: bool,
+    show_help: bool,
     error: Option<String>,
 }
 
@@ -317,6 +318,9 @@ fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                     frame,
                     areas[1],
                 );
+            }
+            if state.ui_state.show_help {
+                render_help_panel(frame, areas[1]);
             }
         })?;
 

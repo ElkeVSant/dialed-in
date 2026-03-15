@@ -418,3 +418,63 @@ pub(super) fn render_search_bar(
         frame.render_widget(Paragraph::new(query), inner_search_area);
     }
 }
+
+pub(super) fn render_help_panel(frame: &mut Frame, area: Rect) {
+    let help_panel_area = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(12)])
+        .split(
+            Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Min(0), Constraint::Length(64)])
+                .split(area)[1],
+        )[1]
+    .inner(Margin::new(2, 1));
+    let panel = Block::new().title("Options: ?");
+    let inner_panel_area = panel.inner(help_panel_area);
+    let inner_panel = Block::new().bg(Color::Gray);
+
+    frame.render_widget(Clear, help_panel_area);
+    frame.render_widget(panel, help_panel_area);
+    frame.render_widget(inner_panel, inner_panel_area);
+
+    let options = vec![
+        ("a", "add coffee", "/", "search"),
+        ("e | u | _", "update coffee", "", ""),
+        ("d", "delete coffee", "ar", "aroma"),
+        ("", "", "sw", "sweetness"),
+        ("Tab | ↓", "select next", "ac", "acidity"),
+        ("Shift + Tab | ↑", "select previous", "bo", "body"),
+        ("←", "select left column", "af", "aftertaste"),
+        ("→", "select right column", ".s", "strength"),
+        ("", "", ".p", "personal"),
+        ("Esc | q", "close modal/quit app", ":a+", "at least a"),
+        ("?", "open/close help panel", ":a-", "at most a"),
+    ];
+    let panel_rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(vec![Constraint::Length(1); options.len()])
+        .split(inner_panel_area);
+
+    options
+        .iter()
+        .zip(panel_rows.iter())
+        .for_each(|((key, option, filter, meaning), row_area)| {
+            let row_areas = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Length(16),
+                    Constraint::Fill(1),
+                    Constraint::Length(22),
+                    Constraint::Fill(4),
+                    Constraint::Length(4),
+                    Constraint::Fill(1),
+                    Constraint::Length(12),
+                ])
+                .split(*row_area);
+            frame.render_widget(Paragraph::new(*key).fg(Color::Black), row_areas[0]);
+            frame.render_widget(Paragraph::new(*option).fg(Color::Black), row_areas[2]);
+            frame.render_widget(Paragraph::new(*filter).fg(Color::Black), row_areas[4]);
+            frame.render_widget(Paragraph::new(*meaning).fg(Color::Black), row_areas[6]);
+        });
+}
